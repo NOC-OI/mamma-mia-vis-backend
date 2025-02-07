@@ -42,22 +42,19 @@ class ZarrReader:
         zarr_group = zarr.open(store_path, mode="r")
         if group:
             zarr_group = zarr_group[group]
-        result = {}
 
-        # Check for datetimes
-        if "datetimes" in zarr_group or "time" in zarr_group:
-            result["datetimes"] = zarr_group.get("datetimes", zarr_group.get("time"))[:].tolist()
+        datetimes = zarr_group.get("datetimes", zarr_group.get("time"))[:].tolist() if ("datetimes" in zarr_group or "time" in zarr_group) else []
+        latitudes = zarr_group.get("latitude", zarr_group.get("latitudes", zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" in zarr_group or "latitude" in zarr_group or "nav_lat" in zarr_group) else []
+        longitudes = zarr_group.get("longitude", zarr_group.get("longitudes", zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" in zarr_group or "longitude" in zarr_group or "nav_lon" in zarr_group) else []
+        depths = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht")))[:].tolist() if ("depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group) else []
 
-        # Check for latitudes
-        if "latitudes" in zarr_group or "latitude" in zarr_group or "nav_lat" in zarr_group:
-            result["latitudes"] = zarr_group.get("latitude", zarr_group.get("latitudes", zarr_group.get("nav_lat")))[:].tolist()
+        trajectory = []
+        for i in range(min(len(datetimes), len(latitudes), len(longitudes), len(depths))):  # Iterate up to the shortest array length
+            trajectory.append({
+                "datetime": datetimes[i],
+                "latitude": latitudes[i],
+                "longitude": longitudes[i],
+                "depth": depths[i]
+            })
 
-        # Check for longitudes
-        if "longitudes" in zarr_group or "longitude" in zarr_group or "nav_lon" in zarr_group:
-            result["longitudes"] = zarr_group.get("longitude", zarr_group.get("longitudes", zarr_group.get("nav_lon")))[:].tolist()
-
-        # Check for depths
-        if "depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group:
-            result["depths"] = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht")))[:].tolist()
-
-        return result
+        return {"trajectory": trajectory}
