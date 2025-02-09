@@ -1,5 +1,7 @@
 import zarr
+import numpy as np
 from typing import List, Optional
+import datetime
 
 
 class ZarrReader:
@@ -38,7 +40,7 @@ class ZarrReader:
 
     @staticmethod
     def get_trajectory(store_path: str, group: Optional[str] = None) -> dict:
-        """Get latitude and longitude arrays."""
+        """Get datetime, latitude, longitude and depth data."""
         zarr_group = zarr.open(store_path, mode="r")
         if group:
             zarr_group = zarr_group[group]
@@ -49,12 +51,35 @@ class ZarrReader:
         depths = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht")))[:].tolist() if ("depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group) else []
 
         trajectory = []
-        for i in range(min(len(datetimes), len(latitudes), len(longitudes), len(depths))):  # Iterate up to the shortest array length
-            trajectory.append({
-                "datetime": datetimes[i],
-                "latitude": latitudes[i],
-                "longitude": longitudes[i],
-                "depth": depths[i]
-            })
+        for i in range(min(len(datetimes), len(latitudes), len(longitudes), len(depths))):
+                datetime_str = ""
+                dt_value = datetimes[i]  # Store the original datetime value
+
+                if isinstance(dt_value, np.datetime64):
+                    try:
+                        dt_object = dt_value.astype('datetime64[s]').astype(datetime.datetime)
+                        datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    except OverflowError:  # Handle datetime64 out of range
+                        print(f"OverflowError at index {i}: datetime64 value {dt_value} is out of range.")
+                        datetime_str = "Invalid Date"  # Or handle differently
+                elif isinstance(dt_value, (int, np.int64)):
+                    try:
+                        dt_object = datetime.datetime.fromtimestamp(dt_value / 1000000000)
+                        datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    except (ValueError, OSError) as e:  # Handle integer timestamp out of range
+                        print(f"Timestamp error at index {i}: Integer timestamp {dt_value} is out of range: {e}")
+                        datetime_str = "Invalid Date"  # Or handle differently
+                elif isinstance(dt_value, str):
+                    datetime_str = dt_value
+                else:  # Handle other data types or missing data as needed
+                    print(f"Unexpected datetime type at index {i}: {type(dt_value)}")
+                    datetime_str = "Invalid Date"
+                
+                trajectory.append({
+                    "datetime": datetime_str,
+                    "latitude": latitudes[i],
+                    "longitude": longitudes[i],
+                    "depth": depths[i]
+                })
 
         return {"trajectory": trajectory}
