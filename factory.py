@@ -54,13 +54,25 @@ class ZarrTilerFactory:
         @self.router.get(
             "/zarr_lat_lon",
             response_class=JSONResponse,
-            responses={200: {"description": "Return dataset's Latitude and Longitude."}},
+            responses={200: {"description": "Return dataset's datetime, latitude, longitude and depth."}},
         )
         def lat_lon_endpoint(
             url: str = Query(..., description="Dataset URL"),
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> dict:
-            """Return latitude, longitude, depths and datetimes arrays."""
-            logger.info(f"Fetching lats, longs, depths and datetimes values for URL: {url}, Group: {group}")
+            """Return datetime, latitude, longitude and depth arrays."""
+            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url}, Group: {group}")
             return ZarrReader.get_trajectory(url, group)
-            # return {"latitude": [0,1,2], "longitude": [4,5,6]}
+        
+        @self.router.get(
+            "/zarr_metrics",
+            response_class=JSONResponse,
+            responses={200: {"description": "Return dataset's datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values."}},
+        )
+        def metrics_endpoint(
+            url: str = Query(..., description="Dataset URL"),
+            group: Optional[str] = Query(None, description="Zarr group to inspect"),
+        ) -> dict:
+            """Return datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature arrays."""
+            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url}, Group: {group}")
+            return ZarrReader.get_metrics(url, group)
