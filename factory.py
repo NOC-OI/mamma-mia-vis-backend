@@ -52,11 +52,11 @@ class ZarrTilerFactory:
             return ZarrReader.list_time_values(url, group)
 
         @self.router.get(
-            "/zarr_lat_lon",
+            "/zarr_trajectory",
             response_class=JSONResponse,
             responses={200: {"description": "Return dataset's datetime, latitude, longitude and depth."}},
         )
-        def lat_lon_endpoint(
+        def trajectory_endpoint(
             url: str = Query(..., description="Dataset URL"),
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> dict:
