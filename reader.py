@@ -69,6 +69,9 @@ class ZarrReader:
                     except (ValueError, OSError) as e:  # Handle integer timestamp out of range
                         print(f"Timestamp error at index {i}: Integer timestamp {dt_value} is out of range: {e}")
                         datetime_str = "Invalid Date"  # Or handle differently
+                elif isinstance(dt_value, datetime.date):
+                    dt_object = dt_value
+                    datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
                 elif isinstance(dt_value, str):
                     datetime_str = dt_value
                 else:  # Handle other data types or missing data as needed
