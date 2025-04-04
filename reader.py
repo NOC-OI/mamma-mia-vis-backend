@@ -88,30 +88,31 @@ class ZarrReader:
         return {"trajectory": trajectory}
 
     @staticmethod
-    def get_metrics(store_path: str, group: Optional[str] = None) -> dict:
-        """Get nitrate, phosphate, pitch, pressure, salinity, silicate and temperature data."""
+    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, reality_group: Optional[str] = None) -> dict:
+        """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, salinity, silicate and temperature data."""
 
-        zarr_group = zarr.open(store_path, mode="r")
-        if group:
-            zarr_group = zarr_group[group]
+        zarr_groups = zarr.open(store_path, mode="r")
+        if trajectory_group:
+            traj_zarr_group = zarr_groups[trajectory_group]
+        
+        if reality_group:
+            reality_zarr_group = zarr_groups[reality_group]
 
-        datetimes = zarr_group.get("datetimes", zarr_group.get("time"))[:].tolist() if ("datetimes" in zarr_group or "time" in zarr_group) else []
-        latitudes = zarr_group.get("latitude", zarr_group.get("latitudes", zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" in zarr_group or "latitude" in zarr_group or "nav_lat" in zarr_group) else []
-        longitudes = zarr_group.get("longitude", zarr_group.get("longitudes", zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" in zarr_group or "longitude" in zarr_group or "nav_lon" in zarr_group) else []
-        depths = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht")))[:].tolist() if ("depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group) else []
+        datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" in traj_zarr_group or "time" in traj_zarr_group) else []
+        latitudes = traj_zarr_group.get("latitude", traj_zarr_group.get("latitudes", traj_zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" in traj_zarr_group or "latitude" in traj_zarr_group or "nav_lat" in traj_zarr_group) else []
+        longitudes = traj_zarr_group.get("longitude", traj_zarr_group.get("longitudes", traj_zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" in traj_zarr_group or "longitude" in traj_zarr_group or "nav_lon" in traj_zarr_group) else []
+        depths = traj_zarr_group.get("depths", traj_zarr_group.get("depth", traj_zarr_group.get("deptht")))[:].tolist() if ("depths" in traj_zarr_group or "depth" in traj_zarr_group or "deptht" in traj_zarr_group) else []
 
-        nitrate_values = zarr_group.get("nitrate")[:].tolist() if ("nitrate" in zarr_group) else []
-        phosphate_values = zarr_group.get("phosphate")[:].tolist() if ("phosphate" in zarr_group) else []
-        pitch_values = zarr_group.get("pitch")[:].tolist() if ("pitch" in zarr_group) else []
-        pressure_values = zarr_group.get("pressure")[:].tolist() if ("pressure" in zarr_group) else []
-        salinity_values = zarr_group.get("salinity")[:].tolist() if ("salinity" in zarr_group) else []
-        silicate_values = zarr_group.get("silicate")[:].tolist() if ("silicate" in zarr_group) else []
-        temperature_values = zarr_group.get("temperature")[:].tolist() if ("temperature" in zarr_group) else []
+        nitrate_values = reality_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in reality_zarr_group) else []
+        phosphate_values = reality_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in reality_zarr_group) else []
+        pressure_values = reality_zarr_group.get("pressure")[:].tolist() if ("pressure" in reality_zarr_group) else []
+        salinity_values = reality_zarr_group.get("salinity")[:].tolist() if ("salinity" in reality_zarr_group) else []
+        silicate_values = reality_zarr_group.get("silicate")[:].tolist() if ("silicate" in reality_zarr_group) else []
+        temperature_values = reality_zarr_group.get("temperature")[:].tolist() if ("temperature" in reality_zarr_group) else []
 
         metrics = []
 
-        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(nitrate_values), len(phosphate_values), len(pitch_values), len(pressure_values), len(salinity_values), len(silicate_values), len(temperature_values))
-
+        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(nitrate_values), len(phosphate_values), len(pressure_values), len(salinity_values), len(silicate_values), len(temperature_values))
         for i in range(min_size):
             datetime_str = ""
             dt_value = datetimes[i]  # Store the original datetime value
@@ -122,20 +123,20 @@ class ZarrReader:
                     datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
                 except OverflowError:  # Handle datetime64 out of range
                     print(f"OverflowError at index {i}: datetime64 value {dt_value} is out of range.")
-                    datetime_str = "Invalid Date"  # Or handle differently
+                    datetime_str = "Invalid Date"
             elif isinstance(dt_value, (int, np.int64)):
                 try:
                     dt_object = datetime.datetime.fromtimestamp(dt_value / 1000000000)
                     datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
                 except (ValueError, OSError) as e:  # Handle integer timestamp out of range
                     print(f"Timestamp error at index {i}: Integer timestamp {dt_value} is out of range: {e}")
-                    datetime_str = "Invalid Date"  # Or handle differently
+                    datetime_str = "Invalid Date" 
             elif isinstance(dt_value, datetime.date):
                 dt_object = dt_value
                 datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
             elif isinstance(dt_value, str):
                 datetime_str = dt_value
-            else:  # Handle other data types or missing data as needed
+            else:
                 print(f"Unexpected datetime type at index {i}: {type(dt_value)}")
                 datetime_str = "Invalid Date"
 
@@ -146,7 +147,6 @@ class ZarrReader:
                 "depth": depths[i],
                 "nitrate": nitrate_values[i],
                 "phosphate": phosphate_values[i],
-                "pitch": pitch_values[i],
                 "pressure": pressure_values[i],
                 "salinity": salinity_values[i],
                 "silicate": silicate_values[i],

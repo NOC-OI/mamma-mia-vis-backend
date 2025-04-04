@@ -71,8 +71,9 @@ class ZarrTilerFactory:
         )
         def metrics_endpoint(
             url: str = Query(..., description="Dataset URL"),
-            group: Optional[str] = Query(None, description="Zarr group to inspect"),
+            trajectory_group: Optional[str] = Query(None, description="Zarr group to inspect to get trajectory data"),
+            reality_group: Optional[str] = Query(None, description="Zarr group to inspect to get metrics data"),
         ) -> dict:
-            """Return datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url}, Group: {group}")
-            return ZarrReader.get_metrics(url, group)
+            """Return datetime, latitude, longitude, depth, nitrate, phosphate, pressure, salinity, silicate, temperature arrays."""
+            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url}, Group: {reality_group}")
+            return ZarrReader.get_metrics(url, trajectory_group, reality_group)
