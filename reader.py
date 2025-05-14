@@ -98,21 +98,24 @@ class ZarrReader:
         if reality_group:
             reality_zarr_group = zarr_groups[reality_group]
 
-        datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" in traj_zarr_group or "time" in traj_zarr_group) else []
-        latitudes = traj_zarr_group.get("latitude", traj_zarr_group.get("latitudes", traj_zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" in traj_zarr_group or "latitude" in traj_zarr_group or "nav_lat" in traj_zarr_group) else []
-        longitudes = traj_zarr_group.get("longitude", traj_zarr_group.get("longitudes", traj_zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" in traj_zarr_group or "longitude" in traj_zarr_group or "nav_lon" in traj_zarr_group) else []
-        depths = traj_zarr_group.get("depths", traj_zarr_group.get("depth", traj_zarr_group.get("deptht")))[:].tolist() if ("depths" in traj_zarr_group or "depth" in traj_zarr_group or "deptht" in traj_zarr_group) else []
+        datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" or "time" in traj_zarr_group) else []
+        latitudes = traj_zarr_group.get("latitude", traj_zarr_group.get("latitudes", traj_zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" or "latitude" or "nav_lat" in traj_zarr_group) else []
+        longitudes = traj_zarr_group.get("longitude", traj_zarr_group.get("longitudes", traj_zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" or "longitude" or "nav_lon" in traj_zarr_group) else []
+        depths = traj_zarr_group.get("depths", traj_zarr_group.get("depth", traj_zarr_group.get("deptht")))[:].tolist() if ("depths" or "depth" or "deptht" in traj_zarr_group) else []
 
         nitrate_values = reality_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in reality_zarr_group) else []
         phosphate_values = reality_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in reality_zarr_group) else []
         pressure_values = reality_zarr_group.get("pressure")[:].tolist() if ("pressure" in reality_zarr_group) else []
-        salinity_values = reality_zarr_group.get("salinity")[:].tolist() if ("salinity" in reality_zarr_group) else []
+        salinity_values = reality_zarr_group.get("salinity", reality_zarr_group.get("CNDC"))[:].tolist() if ("salinity" or "CNDC" in reality_zarr_group) else []
         silicate_values = reality_zarr_group.get("silicate")[:].tolist() if ("silicate" in reality_zarr_group) else []
-        temperature_values = reality_zarr_group.get("temperature")[:].tolist() if ("temperature" in reality_zarr_group) else []
-
+        temperature_values = reality_zarr_group.get("temperature", reality_zarr_group.get("TEMP"))[:].tolist() if ("temperature" or "TEMP" in reality_zarr_group) else []
+        number_readings = len(datetimes)
+        
+        salinity_values =  np.array(salinity_values).reshape((number_readings)) if number_readings > len(salinity_values) else salinity_values
+        temperature_values = np.array(temperature_values).reshape((number_readings)) if number_readings > len(temperature_values) else temperature_values
+        
         metrics = []
-
-        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(nitrate_values), len(phosphate_values), len(pressure_values), len(salinity_values), len(silicate_values), len(temperature_values))
+        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(salinity_values), len(temperature_values))
         for i in range(min_size):
             datetime_str = ""
             dt_value = datetimes[i]  # Store the original datetime value
@@ -145,14 +148,12 @@ class ZarrReader:
                 "latitude": latitudes[i],
                 "longitude": longitudes[i],
                 "depth": depths[i],
-                "nitrate": nitrate_values[i],
-                "phosphate": phosphate_values[i],
-                "pressure": pressure_values[i],
+                # "nitrate": nitrate_values[i],
+                # "phosphate": phosphate_values[i],
+                # "pressure": pressure_values[i],
                 "salinity": salinity_values[i],
-                "silicate": silicate_values[i],
+                # "silicate": silicate_values[i],
                 "temperature": temperature_values[i]
             })
         
         return {"metrics": metrics}
-    
-
