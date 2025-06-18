@@ -162,7 +162,7 @@ class ZarrReader:
     
     @staticmethod
     def get_metrics_units(store_path: str, attributes_group: str, sensor_name: str)-> dict:
-        """Get salinity and temperature units."""
+        """Get conductivity, temperature and pressure units."""
         zarr_groups = zarr.open(store_path, mode="r")
         attrs_dict = dict(zarr_groups[attributes_group].attrs)
 
