@@ -181,4 +181,12 @@ class ZarrReader:
 
         return json.loads(json_str)
 
+    @staticmethod
+    def get_mission_deployments(store_path: str):
+        """Get mission's deployments."""
+        zarr_groups = zarr.open(store_path, mode="r")
+        deployments_list = list(zarr_groups)
+        return {"deployments": deployments_list}
+        
+
 

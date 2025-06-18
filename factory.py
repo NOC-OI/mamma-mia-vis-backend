@@ -90,3 +90,15 @@ class ZarrTilerFactory:
             """Return salinity and temperature units."""
             logger.info(f"Fetching salinity and temperature units for URL: {url}, Group: {attributes_group}")
             return ZarrReader.get_metrics_units(url, attributes_group, sensor_name)
+
+        @self.router.get(
+            "/zarr_mission_deployments",
+            response_class=JSONResponse,
+            responses={200: {"description": "Return mission's deployments"}}
+        )
+        def mission_deployments_endpoint(
+            url: str = Query(..., description="Dataset URL")
+        )-> dict:
+            """Return mission's deployments."""
+            logger.info(f"Fetching mission's deployments for URL: {url}")
+            return ZarrReader.get_mission_deployments(url)
