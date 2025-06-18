@@ -2,6 +2,7 @@ import zarr
 import numpy as np
 from typing import List, Optional
 import datetime
+import json
 
 
 class ZarrReader:
@@ -88,34 +89,34 @@ class ZarrReader:
         return {"trajectory": trajectory}
 
     @staticmethod
-    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, reality_group: Optional[str] = None) -> dict:
-        """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, salinity, silicate and temperature data."""
+    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None) -> dict:
+        """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
         if trajectory_group:
             traj_zarr_group = zarr_groups[trajectory_group]
         
-        if reality_group:
-            reality_zarr_group = zarr_groups[reality_group]
+        if payload_group:
+            payload_zarr_group = zarr_groups[payload_group]
 
         datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" or "time" in traj_zarr_group) else []
         latitudes = traj_zarr_group.get("latitude", traj_zarr_group.get("latitudes", traj_zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" or "latitude" or "nav_lat" in traj_zarr_group) else []
         longitudes = traj_zarr_group.get("longitude", traj_zarr_group.get("longitudes", traj_zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" or "longitude" or "nav_lon" in traj_zarr_group) else []
         depths = traj_zarr_group.get("depths", traj_zarr_group.get("depth", traj_zarr_group.get("deptht")))[:].tolist() if ("depths" or "depth" or "deptht" in traj_zarr_group) else []
 
-        nitrate_values = reality_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in reality_zarr_group) else []
-        phosphate_values = reality_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in reality_zarr_group) else []
-        pressure_values = reality_zarr_group.get("pressure")[:].tolist() if ("pressure" in reality_zarr_group) else []
-        salinity_values = reality_zarr_group.get("salinity", reality_zarr_group.get("CNDC"))[:].tolist() if ("salinity" or "CNDC" in reality_zarr_group) else []
-        silicate_values = reality_zarr_group.get("silicate")[:].tolist() if ("silicate" in reality_zarr_group) else []
-        temperature_values = reality_zarr_group.get("temperature", reality_zarr_group.get("TEMP"))[:].tolist() if ("temperature" or "TEMP" in reality_zarr_group) else []
-        number_readings = len(datetimes)
+        nitrate_values = payload_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in payload_zarr_group) else []
+        phosphate_values = payload_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in payload_zarr_group) else []
+        pressure_values = payload_zarr_group.get("pressure", payload_zarr_group.get("PRES"))[:].tolist() if ("pressure" or "PRES" in payload_zarr_group) else []
+        conductivity_values = payload_zarr_group.get("salinity", payload_zarr_group.get("CNDC"))[:].tolist() if ("salinity" or "CNDC" in payload_zarr_group) else []
+        silicate_values = payload_zarr_group.get("silicate")[:].tolist() if ("silicate" in payload_zarr_group) else []
+        temperature_values = payload_zarr_group.get("temperature", payload_zarr_group.get("TEMP"))[:].tolist() if ("temperature" or "TEMP" in payload_zarr_group) else []
+        # number_readings = len(datetimes)
         
-        salinity_values =  np.array(salinity_values).reshape((number_readings)) if number_readings > len(salinity_values) else salinity_values
-        temperature_values = np.array(temperature_values).reshape((number_readings)) if number_readings > len(temperature_values) else temperature_values
+        # conductivity_values =  np.array(conductivity_values).reshape((number_readings)) if number_readings > len(conductivity_values) else conductivity_values
+        # temperature_values = np.array(temperature_values).reshape((number_readings)) if number_readings > len(temperature_values) else temperature_values
         
         metrics = []
-        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(salinity_values), len(temperature_values))
+        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(conductivity_values), len(temperature_values))
         for i in range(min_size):
             datetime_str = ""
             dt_value = datetimes[i]  # Store the original datetime value
@@ -151,9 +152,33 @@ class ZarrReader:
                 # "nitrate": nitrate_values[i],
                 # "phosphate": phosphate_values[i],
                 # "pressure": pressure_values[i],
-                "salinity": salinity_values[i],
+                "conductivity": conductivity_values[i],
                 # "silicate": silicate_values[i],
-                "temperature": temperature_values[i]
+                "temperature": temperature_values[i],
+                "pressure": pressure_values[i]
             })
         
         return {"metrics": metrics}
+    
+    @staticmethod
+    def get_metrics_units(store_path: str, attributes_group: str, sensor_name: str)-> dict:
+        """Get salinity and temperature units."""
+        zarr_groups = zarr.open(store_path, mode="r")
+        attrs_dict = dict(zarr_groups[attributes_group].attrs)
+
+        sensor_reading_names = ["CNDC", "TEMP", "PRES"]
+        sensor_reading_json = "{"
+        for parameter in sensor_reading_names:
+            parameter_name = attrs_dict["sensors"][sensor_name]["parameters"][parameter]["alternate_labels"]
+            sensor_reading_json = sensor_reading_json + "\"" + parameter + "\":\"" + parameter_name[0] + "\","     
+        sensor_reading_json = json.loads(sensor_reading_json[:-1] + "}")
+
+        json_str = "{"
+        for variable_name in sensor_reading_json.keys():
+            var_unit = attrs_dict["sensors"][sensor_name]["parameters"][variable_name]["unit_of_measure"]
+            json_str = json_str + "\"" + sensor_reading_json.get(variable_name).lower() + "\":\"" + var_unit + "\","
+        json_str = json_str[:-1] + "}"
+
+        return json.loads(json_str)
+
+
