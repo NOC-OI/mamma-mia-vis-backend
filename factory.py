@@ -23,6 +23,7 @@ class ZarrTilerFactory:
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> List[str]:
             """Return available variables."""
+            logger.info(f"Fetching variables for URL: {url} and group: {group}")
             return ZarrReader.list_variables(url, group)
 
         @self.router.get(
@@ -35,6 +36,7 @@ class ZarrTilerFactory:
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> dict:
             """Return dimensions and their shapes."""
+            logger.info(f"Fetching dimensions and shapes for URL: {url} and group: {group}")
             return ZarrReader.list_dimensions(url, group)
 
         @self.router.get(
@@ -47,7 +49,7 @@ class ZarrTilerFactory:
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> List[str]:
             """Return time values."""
-            logger.info(f"Fetching time values for URL: {url}, Group: {group}")
+            logger.info(f"Fetching time values for URL: {url} and group: {group}")
             return ZarrReader.list_time_values(url, group)
 
         @self.router.get(
@@ -60,7 +62,7 @@ class ZarrTilerFactory:
             group: Optional[str] = Query(None, description="Zarr group to inspect"),
         ) -> dict:
             """Return datetime, latitude, longitude and depth arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url}, Group: {group}")
+            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url} and group: {group}")
             return ZarrReader.get_trajectory(url, group)
         
         @self.router.get(
@@ -74,7 +76,7 @@ class ZarrTilerFactory:
             reality_group: Optional[str] = Query(None, description="Zarr group to inspect to get metrics data"),
         ) -> dict:
             """Return datetime, latitude, longitude, depth, nitrate, phosphate, pressure, salinity, silicate, temperature arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url}, Group: {reality_group}")
+            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url} and group: {reality_group}")
             return ZarrReader.get_metrics(url, trajectory_group, reality_group)
         
         @self.router.get(
@@ -87,8 +89,8 @@ class ZarrTilerFactory:
                 attributes_group: str = Query(..., description="Zarr group to inspect to get metrics from attributes"),
                 sensor_name: str = Query(..., description="Sensor name of Autonomous Underwater Vehicle")
         )-> dict:
-            """Return salinity and temperature units."""
-            logger.info(f"Fetching salinity and temperature units for URL: {url}, Group: {attributes_group}")
+            """Return conductivity, temperature and pressure units."""
+            logger.info(f"Fetching conductivity, temperature and pressure units for URL: {url}, group: {attributes_group} and sensor name: {sensor_name}")
             return ZarrReader.get_metrics_units(url, attributes_group, sensor_name)
 
         @self.router.get(

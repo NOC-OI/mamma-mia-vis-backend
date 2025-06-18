@@ -187,6 +187,3 @@ class ZarrReader:
         zarr_groups = zarr.open(store_path, mode="r")
         deployments_list = list(zarr_groups)
         return {"deployments": deployments_list}
-        
-
-

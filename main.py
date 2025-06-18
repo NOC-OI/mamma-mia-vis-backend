@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from factory import ZarrTilerFactory
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Zarr Reader API", description="Zarr Reder API of MAMMA-MIA visualisation")
+app = FastAPI(title="Zarr Reader API", description="Zarr Reader API of MAMMA-MIA visualisation")
 
 
 origins = [
