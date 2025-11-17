@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from typing import List, Optional
+from typing import List, Optional, Annotated
 from fastapi.responses import JSONResponse
 from  reader import ZarrReader
 import logging
@@ -68,16 +68,18 @@ class ZarrTilerFactory:
         @self.router.get(
             "/zarr_metrics",
             response_class=JSONResponse,
-            responses={200: {"description": "Return dataset's datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values."}},
+            responses={200: {"description": "Return dataset's datetime, latitude, longitude, depth, conductivity, temperature, pressure values."}},
         )
         def metrics_endpoint(
-            url: str = Query(..., description="Dataset URL"),
-            trajectory_group: Optional[str] = Query(None, description="Zarr group to inspect to get trajectory data"),
-            reality_group: Optional[str] = Query(None, description="Zarr group to inspect to get metrics data"),
+            url: Annotated[str, Query(description="Dataset URL")] = ...,
+            trajectory_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get metrics data")] = None,
+            reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get metrics data")] = None,
+            page: Annotated[Optional[int], Query(description="Number of page")] = 0,
+            records_per_page: Annotated[Optional[int], Query(description="Number of records per page")] = 10
         ) -> dict:
-            """Return datetime, latitude, longitude, depth, nitrate, phosphate, pressure, salinity, silicate, temperature arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude, depth, nitrate, phosphate, pitch, pressure, salinity, silicate, temperature values for URL: {url} and group: {reality_group}")
-            return ZarrReader.get_metrics(url, trajectory_group, reality_group)
+            """Return datetime, latitude, longitude, depth, conductivity, temperature, pressure arrays."""
+            logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity, temperature, pressure values for URL: {url} and group: {reality_group}")
+            return ZarrReader.get_metrics(url, trajectory_group, reality_group, page, records_per_page)
         
         @self.router.get(
             "/zarr_metrics_units",

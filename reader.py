@@ -89,7 +89,7 @@ class ZarrReader:
         return {"trajectory": trajectory}
 
     @staticmethod
-    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None) -> dict:
+    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None, page: Optional[int] = 0, records_per_page: Optional[int] = 10) -> dict:
         """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
@@ -99,10 +99,11 @@ class ZarrReader:
         if payload_group:
             payload_zarr_group = zarr_groups[payload_group]
 
-        datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" or "time" in traj_zarr_group) else []
-        latitudes = traj_zarr_group.get("latitude", traj_zarr_group.get("latitudes", traj_zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" or "latitude" or "nav_lat" in traj_zarr_group) else []
-        longitudes = traj_zarr_group.get("longitude", traj_zarr_group.get("longitudes", traj_zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" or "longitude" or "nav_lon" in traj_zarr_group) else []
-        depths = traj_zarr_group.get("depths", traj_zarr_group.get("depth", traj_zarr_group.get("deptht")))[:].tolist() if ("depths" or "depth" or "deptht" in traj_zarr_group) else []
+        # datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" or "time" in traj_zarr_group) else []
+        datetimes = payload_zarr_group.get("TIME", payload_zarr_group.get("datetimes"))[:].tolist() if ("TIME" or "datetimes" in payload_zarr_group) else []
+        latitudes = payload_zarr_group.get("LATITUDE", payload_zarr_group.get("LAT", payload_zarr_group.get("ALATPT01")))[:].tolist() if ("LATITUDE" or "LAT" or "ALATPT01" in payload_zarr_group) else []
+        longitudes = payload_zarr_group.get("LONGITUDE", payload_zarr_group.get("LON", payload_zarr_group.get("ALONPT01")))[:].tolist() if ("LONGITUDE" or "LON" or "ALONPT01" in payload_zarr_group) else []
+        depths = payload_zarr_group.get("DEPTH", payload_zarr_group.get("GLIDER_DEPTH", payload_zarr_group.get("ADEPPT01")))[:].tolist() if ("DEPTH" or "GLIDER_DEPTH" or "ADEPPT01" in payload_zarr_group) else []
 
         nitrate_values = payload_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in payload_zarr_group) else []
         phosphate_values = payload_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in payload_zarr_group) else []
@@ -117,48 +118,65 @@ class ZarrReader:
         
         metrics = []
         min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(conductivity_values), len(temperature_values))
-        for i in range(min_size):
+        current_page = page if min_size > 0 else 0
+        cur_records_page = records_per_page if records_per_page > 0 else 10
+        start_index = (current_page - 1) * cur_records_page if current_page > 0 else 0
+        end_index = current_page * cur_records_page if current_page > 0 and cur_records_page > 0 else 0
+        for start_index in range(start_index, end_index):
             datetime_str = ""
-            dt_value = datetimes[i]  # Store the original datetime value
+            dt_value = datetimes[start_index]  # Store the original datetime value
 
             if isinstance(dt_value, np.datetime64):
                 try:
                     dt_object = dt_value.astype('datetime64[s]').astype(datetime.datetime)
                     datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
                 except OverflowError:  # Handle datetime64 out of range
-                    print(f"OverflowError at index {i}: datetime64 value {dt_value} is out of range.")
+                    print(f"OverflowError at index {start_index}: datetime64 value {dt_value} is out of range.")
                     datetime_str = "Invalid Date"
             elif isinstance(dt_value, (int, np.int64)):
                 try:
                     dt_object = datetime.datetime.fromtimestamp(dt_value / 1000000000)
                     datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
                 except (ValueError, OSError) as e:  # Handle integer timestamp out of range
-                    print(f"Timestamp error at index {i}: Integer timestamp {dt_value} is out of range: {e}")
+                    print(f"Timestamp error at index {start_index}: Integer timestamp {dt_value} is out of range: {e}")
                     datetime_str = "Invalid Date" 
             elif isinstance(dt_value, datetime.date):
                 dt_object = dt_value
                 datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
             elif isinstance(dt_value, str):
                 datetime_str = dt_value
+            elif isinstance(dt_value, float):
+                # Convert nanoseconds to seconds
+                # The timestamp is in nanoseconds, so divide by 1e9 (10^9) to get seconds.
+                # print(' NANOSEC TIMESTAMP: ', dt_value)
+                seconds_timestamp = dt_value / 1e9
+                # Convert the Unix timestamp (in seconds) to a datetime object
+                dt_object = datetime.datetime.fromtimestamp(seconds_timestamp)
+                # Format the datetime object to "dd/mm/yyyy HH:mm:ss"
+                datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
             else:
-                print(f"Unexpected datetime type at index {i}: {type(dt_value)}")
+                print(f"Unexpected datetime type at index {start_index}: {(dt_value)}")
                 datetime_str = "Invalid Date"
 
             metrics.append({
                 "datetime": datetime_str,
-                "latitude": latitudes[i],
-                "longitude": longitudes[i],
-                "depth": depths[i],
+                "latitude": latitudes[start_index],
+                "longitude": longitudes[start_index],
+                "depth": depths[start_index],
                 # "nitrate": nitrate_values[i],
                 # "phosphate": phosphate_values[i],
                 # "pressure": pressure_values[i],
-                "conductivity": conductivity_values[i],
+                "conductivity": conductivity_values[start_index],
                 # "silicate": silicate_values[i],
-                "temperature": temperature_values[i],
-                "pressure": pressure_values[i]
+                "temperature": temperature_values[start_index],
+                "pressure": pressure_values[start_index]
             })
         
-        return {"metrics": metrics}
+        return {
+            "metrics": metrics,
+            "page": current_page,
+            "records": records_per_page
+        }
     
     @staticmethod
     def get_metrics_units(store_path: str, attributes_group: str, sensor_name: str)-> dict:
