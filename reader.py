@@ -91,7 +91,7 @@ class ZarrReader:
 
     @staticmethod
     def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None, page: Optional[int] = 0, records_per_page: Optional[int] = 10) -> dict:
-        """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity, silicate and temperature data."""
+        """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity/sainity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
         if trajectory_group:
@@ -100,24 +100,17 @@ class ZarrReader:
         if payload_group:
             payload_zarr_group = zarr_groups[payload_group]
 
-        # datetimes = traj_zarr_group.get("datetimes", traj_zarr_group.get("time"))[:].tolist() if ("datetimes" or "time" in traj_zarr_group) else []
         datetimes = payload_zarr_group.get("TIME", payload_zarr_group.get("datetimes"))[:].tolist() if ("TIME" or "datetimes" in payload_zarr_group) else []
         latitudes = payload_zarr_group.get("LATITUDE", payload_zarr_group.get("LAT", payload_zarr_group.get("ALATPT01")))[:].tolist() if ("LATITUDE" or "LAT" or "ALATPT01" in payload_zarr_group) else []
         longitudes = payload_zarr_group.get("LONGITUDE", payload_zarr_group.get("LON", payload_zarr_group.get("ALONPT01")))[:].tolist() if ("LONGITUDE" or "LON" or "ALONPT01" in payload_zarr_group) else []
         depths = payload_zarr_group.get("DEPTH", payload_zarr_group.get("GLIDER_DEPTH", payload_zarr_group.get("ADEPPT01")))[:].tolist() if ("DEPTH" or "GLIDER_DEPTH" or "ADEPPT01" in payload_zarr_group) else []
+        pressure_values = payload_zarr_group.get("pressure", payload_zarr_group.get("PRES", payload_zarr_group.get("PRESSURE")))[:].tolist() if ("pressure" or "PRES" or "PRESSURE" in payload_zarr_group) else []
+        conductivity_values = payload_zarr_group.get("salinity", payload_zarr_group.get("CNDC", payload_zarr_group.get("PRACTICAL_SALINITY")))[:].tolist() if ("salinity" or "CNDC" or "PRACTICAL_SALINITY" in payload_zarr_group) else []
+        temperature_values = payload_zarr_group.get("temperature", payload_zarr_group.get("TEMP", payload_zarr_group.get("INSITU_TEMPERATURE", payload_zarr_group.get("POTENTIAL_TEMPERATURE"))))[:].tolist() if ("temperature" or "TEMP" or "INSITU_TEMPERATURE" or "POTENTIAL_TEMPERATURE" in payload_zarr_group) else []
+        chlorophyll_values = payload_zarr_group.get("CHLOROPHYLL")[:].tolist() if ("CHLOROPHYLL" in payload_zarr_group) else []
 
-        nitrate_values = payload_zarr_group.get("nitrate")[:].tolist() if ("nitrate" in payload_zarr_group) else []
-        phosphate_values = payload_zarr_group.get("phosphate")[:].tolist() if ("phosphate" in payload_zarr_group) else []
-        pressure_values = payload_zarr_group.get("pressure", payload_zarr_group.get("PRES"))[:].tolist() if ("pressure" or "PRES" in payload_zarr_group) else []
-        conductivity_values = payload_zarr_group.get("salinity", payload_zarr_group.get("CNDC"))[:].tolist() if ("salinity" or "CNDC" in payload_zarr_group) else []
-        silicate_values = payload_zarr_group.get("silicate")[:].tolist() if ("silicate" in payload_zarr_group) else []
-        temperature_values = payload_zarr_group.get("temperature", payload_zarr_group.get("TEMP"))[:].tolist() if ("temperature" or "TEMP" in payload_zarr_group) else []
-        # number_readings = len(datetimes)
-        
-        # conductivity_values =  np.array(conductivity_values).reshape((number_readings)) if number_readings > len(conductivity_values) else conductivity_values
-        # temperature_values = np.array(temperature_values).reshape((number_readings)) if number_readings > len(temperature_values) else temperature_values
-        
-        metrics = []
+                
+        sensor_readings = []
         min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(conductivity_values), len(temperature_values))
         current_page = page if min_size > 0 else 0
         cur_records_page = records_per_page if records_per_page > 0 else 10
@@ -159,22 +152,20 @@ class ZarrReader:
                 print(f"Unexpected datetime type at index {start_index}: {(dt_value)}")
                 datetime_str = "Invalid Date"
 
-            metrics.append({
+            sensor_readings.append({
                 "datetime": datetime_str,
                 "latitude": latitudes[start_index],
                 "longitude": longitudes[start_index],
                 "depth": depths[start_index],
-                # "nitrate": nitrate_values[start_index],
-                # "phosphate": phosphate_values[start_index],
                 "pressure": pressure_values[start_index],
                 "conductivity": conductivity_values[start_index],
-                # "silicate": silicate_values[start_index],
                 "temperature": temperature_values[start_index],
-                "pressure": pressure_values[start_index]
+                "pressure": pressure_values[start_index],
+                "chlorophyll": chlorophyll_values[start_index],
             })
         
         return {
-            "metrics": metrics,
+            "metrics": sensor_readings,
             "totalRecords": min_size,
             "currentPage": current_page,
             "recordsPerPage": records_per_page

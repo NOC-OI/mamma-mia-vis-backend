@@ -68,17 +68,17 @@ class ZarrTilerFactory:
         @self.router.get(
             "/zarr_metrics",
             response_class=JSONResponse,
-            responses={200: {"description": "Return dataset's datetime, latitude, longitude, depth, conductivity, temperature, pressure values."}},
+            responses={200: {"description": "Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."}},
         )
         def metrics_endpoint(
             url: Annotated[str, Query(description="Dataset URL")] = ...,
-            trajectory_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get metrics data")] = None,
-            reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get metrics data")] = None,
+            trajectory_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
+            reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
             page: Annotated[Optional[int], Query(description="Number of page")] = 0,
             records_per_page: Annotated[Optional[int], Query(description="Number of records per page")] = 10
         ) -> dict:
-            """Return datetime, latitude, longitude, depth, conductivity, temperature, pressure arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity, temperature, pressure values for URL: {url} and group: {reality_group}")
+            """Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."""
+            logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values for URL: {url} and group: {reality_group}")
             return ZarrReader.get_metrics(url, trajectory_group, reality_group, page, records_per_page)
         
         @self.router.get(
