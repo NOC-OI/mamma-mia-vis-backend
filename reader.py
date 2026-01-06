@@ -3,6 +3,7 @@ import numpy as np
 from typing import List, Optional
 import datetime
 import json
+from metricUnit import MetricUnit, short_name, get_key_by_value
 
 
 class ZarrReader:
@@ -163,19 +164,20 @@ class ZarrReader:
                 "latitude": latitudes[start_index],
                 "longitude": longitudes[start_index],
                 "depth": depths[start_index],
-                # "nitrate": nitrate_values[i],
-                # "phosphate": phosphate_values[i],
-                # "pressure": pressure_values[i],
+                # "nitrate": nitrate_values[start_index],
+                # "phosphate": phosphate_values[start_index],
+                "pressure": pressure_values[start_index],
                 "conductivity": conductivity_values[start_index],
-                # "silicate": silicate_values[i],
+                # "silicate": silicate_values[start_index],
                 "temperature": temperature_values[start_index],
                 "pressure": pressure_values[start_index]
             })
         
         return {
             "metrics": metrics,
-            "page": current_page,
-            "records": records_per_page
+            "totalRecords": min_size,
+            "currentPage": current_page,
+            "recordsPerPage": records_per_page
         }
     
     @staticmethod
@@ -196,7 +198,13 @@ class ZarrReader:
             var_unit = attrs_dict["sensors"][sensor_name]["parameters"][variable_name]["unit_of_measure"]
             json_str = json_str + "\"" + sensor_reading_json.get(variable_name).lower() + "\":\"" + var_unit + "\","
         json_str = json_str[:-1] + "}"
+        metrics_units_json = json.loads(json_str)
 
+        json_str = "{"
+        for metric, metric_unit in metrics_units_json.items():
+            json_str = json_str + "\"" + metric  +  "\":\"" + short_name[get_key_by_value(MetricUnit, metric_unit)] + "\","
+        json_str = json_str[:-1] + "}"
+        
         return json.loads(json_str)
 
     @staticmethod
