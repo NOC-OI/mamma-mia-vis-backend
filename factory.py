@@ -84,15 +84,15 @@ class ZarrTilerFactory:
         @self.router.get(
             "/zarr_metrics_units",
             response_class=JSONResponse,
-            responses={200: {"description": "Return dataset's salinity and temperature units."}},
+            responses={200: {"description": "Return conductivity, salinity, temperature and pressure units."}},
         )
         def metrics_units_endpoint(
                 url: str = Query(..., description="Dataset URL"), 
-                attributes_group: str = Query(..., description="Zarr group to inspect to get metrics from attributes"),
+                attributes_group: str = Query(..., description="Zarr group to inspect to get sensor readings units from attributes"),
                 sensor_name: str = Query(..., description="Sensor name of Autonomous Underwater Vehicle")
         )-> dict:
-            """Return conductivity, temperature and pressure units."""
-            logger.info(f"Fetching conductivity, temperature and pressure units for URL: {url}, group: {attributes_group} and sensor name: {sensor_name}")
+            """Return conductivity, salinity, temperature and pressure units."""
+            logger.info(f"Fetching conductivity, salinity, temperature and pressure units for URL: {url}, group: {attributes_group} and sensor name: {sensor_name}")
             return ZarrReader.get_metrics_units(url, attributes_group, sensor_name)
 
         @self.router.get(

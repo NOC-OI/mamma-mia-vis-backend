@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Optional
 import datetime
 import json
-from metricUnit import MetricUnit, short_name, get_key_by_value
+from metricUnit import MetricUnit, short_name, get_key_by_value, formatMetricUnitName
 
 
 class ZarrReader:
@@ -173,27 +173,37 @@ class ZarrReader:
     
     @staticmethod
     def get_metrics_units(store_path: str, attributes_group: str, sensor_name: str)-> dict:
-        """Get conductivity, temperature and pressure units."""
+        """Get conductivity, salinity, temperature and pressure units."""
         zarr_groups = zarr.open(store_path, mode="r")
         attrs_dict = dict(zarr_groups[attributes_group].attrs)
 
-        sensor_reading_names = ["CNDC", "TEMP", "PRES"]
+        sensor_reading_names = ["CNDC", "PRACTICAL_SALINITY", "TEMP", "INSITU_TEMPERATURE", "POTENTIAL_TEMPERATURE", "PRES", "PRESSURE", "CHLOROPHYLL"]
         sensor_reading_json = "{"
+        sensor_readings_groups = []
         for parameter in sensor_reading_names:
-            parameter_name = attrs_dict["sensors"][sensor_name]["parameters"][parameter]["alternate_labels"]
-            sensor_reading_json = sensor_reading_json + "\"" + parameter + "\":\"" + parameter_name[0] + "\","     
+
+            if "parameters" in attrs_dict["sensors"][sensor_name] and parameter in attrs_dict["sensors"][sensor_name]["parameters"]:
+                sensor_readings_groups = ["parameters"]
+            elif "specification" in attrs_dict["sensors"][sensor_name] and parameter in attrs_dict["sensors"][sensor_name]["specification"]:
+                sensor_readings_groups = ["specification", "meta_data"]
+            if len(sensor_readings_groups) > 0:
+                
+                if len(sensor_readings_groups) > 1:
+                    parameter_name = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]]["alternate_labels"]
+                    var_unit = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]]["unit_of_measure"]
+                else:
+                    parameter_name = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter]["alternate_labels"]
+                    var_unit = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter]["unit_of_measure"] 
+                sensor_readings_groups = []   
+                
+                sensor_reading_json = sensor_reading_json + "\"" + parameter_name[0] + "\":\"" + var_unit + "\","     
+        
         sensor_reading_json = json.loads(sensor_reading_json[:-1] + "}")
 
-        json_str = "{"
-        for variable_name in sensor_reading_json.keys():
-            var_unit = attrs_dict["sensors"][sensor_name]["parameters"][variable_name]["unit_of_measure"]
-            json_str = json_str + "\"" + sensor_reading_json.get(variable_name).lower() + "\":\"" + var_unit + "\","
-        json_str = json_str[:-1] + "}"
-        metrics_units_json = json.loads(json_str)
 
         json_str = "{"
-        for metric, metric_unit in metrics_units_json.items():
-            json_str = json_str + "\"" + metric  +  "\":\"" + short_name[get_key_by_value(MetricUnit, metric_unit)] + "\","
+        for metric, metric_unit in sensor_reading_json.items():
+            json_str = json_str + "\"" + formatMetricUnitName(metric)  +  "\":\"" + short_name[get_key_by_value(MetricUnit, metric_unit)] + "\","
         json_str = json_str[:-1] + "}"
         
         return json.loads(json_str)
