@@ -172,35 +172,40 @@ class ZarrReader:
         }
     
     @staticmethod
-    def get_metrics_units(store_path: str, attributes_group: str, sensor_name: str)-> dict:
-        """Get conductivity, salinity, temperature and pressure units."""
+    def get_metrics_units(store_path: str, attributes_group: str, second_sensor: str, third_sensor: str)-> dict:
+        """Get conductivity, salinity, temperature, pressure and chlorophyll units."""
         zarr_groups = zarr.open(store_path, mode="r")
         attrs_dict = dict(zarr_groups[attributes_group].attrs)
 
         sensor_reading_names = ["CNDC", "PRACTICAL_SALINITY", "TEMP", "INSITU_TEMPERATURE", "POTENTIAL_TEMPERATURE", "PRES", "PRESSURE", "CHLOROPHYLL"]
         sensor_reading_json = "{"
         sensor_readings_groups = []
+        
         for parameter in sensor_reading_names:
-
-            if "parameters" in attrs_dict["sensors"][sensor_name] and parameter in attrs_dict["sensors"][sensor_name]["parameters"]:
+            if parameter == "CHLOROPHYLL":
+                parameter_name_group = "parameter_id"
+                second_sensor_group = third_sensor
+            else:
+                parameter_name_group = "alternate_labels"
+                second_sensor_group = second_sensor
+        
+            if "parameters" in attrs_dict["sensors"][second_sensor_group] and parameter in attrs_dict["sensors"][second_sensor_group]["parameters"]:
                 sensor_readings_groups = ["parameters"]
-            elif "specification" in attrs_dict["sensors"][sensor_name] and parameter in attrs_dict["sensors"][sensor_name]["specification"]:
+            elif "specification" in attrs_dict["sensors"][second_sensor_group] and parameter in attrs_dict["sensors"][second_sensor_group]["specification"]:
                 sensor_readings_groups = ["specification", "meta_data"]
-            if len(sensor_readings_groups) > 0:
                 
+            if len(sensor_readings_groups) > 0:    
                 if len(sensor_readings_groups) > 1:
-                    parameter_name = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]]["alternate_labels"]
-                    var_unit = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]]["unit_of_measure"]
+                    parameter_name = attrs_dict["sensors"][second_sensor_group][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]][parameter_name_group]
+                    var_unit = attrs_dict["sensors"][second_sensor_group][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]]["unit_of_measure"]    
                 else:
-                    parameter_name = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter]["alternate_labels"]
-                    var_unit = attrs_dict["sensors"][sensor_name][sensor_readings_groups[0]][parameter]["unit_of_measure"] 
+                    parameter_name = attrs_dict["sensors"][second_sensor_group][sensor_readings_groups[0]][parameter]["alternate_labels"]
+                    var_unit = attrs_dict["sensors"][second_sensor_group][sensor_readings_groups[0]][parameter]["unit_of_measure"] 
                 sensor_readings_groups = []   
-                
-                sensor_reading_json = sensor_reading_json + "\"" + parameter_name[0] + "\":\"" + var_unit + "\","     
+                sensor_reading_name = parameter_name if isinstance(parameter_name, str) else parameter_name[0]
+                sensor_reading_json = sensor_reading_json + "\"" + sensor_reading_name + "\":\"" + var_unit + "\","     
         
         sensor_reading_json = json.loads(sensor_reading_json[:-1] + "}")
-
-
         json_str = "{"
         for metric, metric_unit in sensor_reading_json.items():
             json_str = json_str + "\"" + formatMetricUnitName(metric)  +  "\":\"" + short_name[get_key_by_value(MetricUnit, metric_unit)] + "\","
