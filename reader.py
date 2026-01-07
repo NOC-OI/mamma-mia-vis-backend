@@ -161,7 +161,7 @@ class ZarrReader:
                 "conductivity": conductivity_values[start_index],
                 "temperature": temperature_values[start_index],
                 "pressure": pressure_values[start_index],
-                "chlorophyll": chlorophyll_values[start_index],
+                "chlorophyll": chlorophyll_values[start_index] if len(chlorophyll_values) > 0 else None,
             })
         
         return {
@@ -182,7 +182,7 @@ class ZarrReader:
         sensor_readings_groups = []
         
         for parameter in sensor_reading_names:
-            if parameter == "CHLOROPHYLL":
+            if parameter == "CHLOROPHYLL" and third_sensor:
                 parameter_name_group = "parameter_id"
                 second_sensor_group = third_sensor
             else:
