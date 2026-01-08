@@ -31,10 +31,11 @@ def get_key_by_value(enum_class: Type[Enum], value: Any) -> Optional[Enum]:
 
 def formatMetricUnitName(name: str):
     formatted_name = name.replace(" ", "_").lower()
-    wordToLook = "temperature"
-    if wordToLook in name:
-        foundIndex = name.index(wordToLook)
-        formatted_name = name[foundIndex:]
+    wordsToLook = ["temperature", "salinity"]
+    for unit_name in wordsToLook:        
+        if unit_name in name:
+            foundIndex = name.index(unit_name)
+            formatted_name = name[foundIndex:]
 
     return formatted_name
 

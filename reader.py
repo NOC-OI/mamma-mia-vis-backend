@@ -105,13 +105,14 @@ class ZarrReader:
         longitudes = payload_zarr_group.get("LONGITUDE", payload_zarr_group.get("LON", payload_zarr_group.get("ALONPT01")))[:].tolist() if ("LONGITUDE" or "LON" or "ALONPT01" in payload_zarr_group) else []
         depths = payload_zarr_group.get("DEPTH", payload_zarr_group.get("GLIDER_DEPTH", payload_zarr_group.get("ADEPPT01")))[:].tolist() if ("DEPTH" or "GLIDER_DEPTH" or "ADEPPT01" in payload_zarr_group) else []
         pressure_values = payload_zarr_group.get("pressure", payload_zarr_group.get("PRES", payload_zarr_group.get("PRESSURE")))[:].tolist() if ("pressure" or "PRES" or "PRESSURE" in payload_zarr_group) else []
-        conductivity_values = payload_zarr_group.get("salinity", payload_zarr_group.get("CNDC", payload_zarr_group.get("PRACTICAL_SALINITY")))[:].tolist() if ("salinity" or "CNDC" or "PRACTICAL_SALINITY" in payload_zarr_group) else []
+        conductivity_values = payload_zarr_group.get("CNDC")[:].tolist() if ("CNDC" in payload_zarr_group) else []
+        salinity_values = payload_zarr_group.get("salinity", payload_zarr_group.get("PRACTICAL_SALINITY"))[:].tolist() if ("salinity" or "PRACTICAL_SALINITY" in payload_zarr_group) else []
         temperature_values = payload_zarr_group.get("temperature", payload_zarr_group.get("TEMP", payload_zarr_group.get("INSITU_TEMPERATURE", payload_zarr_group.get("POTENTIAL_TEMPERATURE"))))[:].tolist() if ("temperature" or "TEMP" or "INSITU_TEMPERATURE" or "POTENTIAL_TEMPERATURE" in payload_zarr_group) else []
         chlorophyll_values = payload_zarr_group.get("CHLOROPHYLL")[:].tolist() if ("CHLOROPHYLL" in payload_zarr_group) else []
 
                 
         sensor_readings = []
-        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(conductivity_values), len(temperature_values))
+        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(temperature_values))
         current_page = page if min_size > 0 else 0
         cur_records_page = records_per_page if records_per_page > 0 else 10
         start_index = (current_page - 1) * cur_records_page if current_page > 0 else 0
@@ -158,7 +159,8 @@ class ZarrReader:
                 "longitude": longitudes[start_index],
                 "depth": depths[start_index],
                 "pressure": pressure_values[start_index],
-                "conductivity": conductivity_values[start_index],
+                "conductivity": conductivity_values[start_index] if len(conductivity_values) > 0 else None,
+                "salinity": salinity_values[start_index] if len(salinity_values) > 0 else None,
                 "temperature": temperature_values[start_index],
                 "pressure": pressure_values[start_index],
                 "chlorophyll": chlorophyll_values[start_index] if len(chlorophyll_values) > 0 else None,
@@ -193,7 +195,7 @@ class ZarrReader:
                 sensor_readings_groups = ["parameters"]
             elif "specification" in attrs_dict["sensors"][second_sensor_group] and parameter in attrs_dict["sensors"][second_sensor_group]["specification"]:
                 sensor_readings_groups = ["specification", "meta_data"]
-                
+
             if len(sensor_readings_groups) > 0:    
                 if len(sensor_readings_groups) > 1:
                     parameter_name = attrs_dict["sensors"][second_sensor_group][sensor_readings_groups[0]][parameter][sensor_readings_groups[1]][parameter_name_group]
