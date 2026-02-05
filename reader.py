@@ -3,7 +3,9 @@ import numpy as np
 from typing import List, Optional
 import datetime
 import json
+import pandas as pd
 from metricUnit import MetricUnit, short_name, get_key_by_value, formatMetricUnitName
+from util import to_iso_format
 
 
 class ZarrReader:
@@ -90,7 +92,7 @@ class ZarrReader:
         return {"trajectory": trajectory}
 
     @staticmethod
-    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None, page: Optional[int] = 0, records_per_page: Optional[int] = 10) -> dict:
+    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page_number: Optional[int] = 0, page_size: Optional[int] = 10) -> dict:
         """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity/sainity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
@@ -110,67 +112,48 @@ class ZarrReader:
         temperature_values = payload_zarr_group.get("temperature", payload_zarr_group.get("TEMP", payload_zarr_group.get("INSITU_TEMPERATURE", payload_zarr_group.get("POTENTIAL_TEMPERATURE"))))[:].tolist() if ("temperature" or "TEMP" or "INSITU_TEMPERATURE" or "POTENTIAL_TEMPERATURE" in payload_zarr_group) else []
         chlorophyll_values = payload_zarr_group.get("CHLOROPHYLL")[:].tolist() if ("CHLOROPHYLL" in payload_zarr_group) else []
 
-                
-        sensor_readings = []
-        min_size = min(len(datetimes), len(latitudes), len(longitudes), len(depths), len(temperature_values))
-        current_page = page if min_size > 0 else 0
-        cur_records_page = records_per_page if records_per_page > 0 else 10
-        start_index = (current_page - 1) * cur_records_page if current_page > 0 else 0
-        end_index = current_page * cur_records_page if current_page > 0 and cur_records_page > 0 else 0
-        for start_index in range(start_index, end_index):
-            datetime_str = ""
-            dt_value = datetimes[start_index]  # Store the original datetime value
+        full_global_df = pd.DataFrame({
+            "raw_datetime": datetimes,
+            "latitude": latitudes,
+            "longitude": longitudes,
+            "depth": depths,
+            "pressure": pressure_values,
+            "conductivity": conductivity_values if len(conductivity_values) > 0 else None,
+            "salinity": salinity_values if len(salinity_values) > 0 else None,
+            "temperature": temperature_values,
+            "chlorophyll": chlorophyll_values if len(chlorophyll_values) > 0 else None
+        })
 
-            if isinstance(dt_value, np.datetime64):
-                try:
-                    dt_object = dt_value.astype('datetime64[s]').astype(datetime.datetime)
-                    datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-                except OverflowError:  # Handle datetime64 out of range
-                    print(f"OverflowError at index {start_index}: datetime64 value {dt_value} is out of range.")
-                    datetime_str = "Invalid Date"
-            elif isinstance(dt_value, (int, np.int64)):
-                try:
-                    dt_object = datetime.datetime.fromtimestamp(dt_value / 1000000000)
-                    datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-                except (ValueError, OSError) as e:  # Handle integer timestamp out of range
-                    print(f"Timestamp error at index {start_index}: Integer timestamp {dt_value} is out of range: {e}")
-                    datetime_str = "Invalid Date" 
-            elif isinstance(dt_value, datetime.date):
-                dt_object = dt_value
-                datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-            elif isinstance(dt_value, str):
-                datetime_str = dt_value
-            elif isinstance(dt_value, float):
-                # Convert nanoseconds to seconds
-                # The timestamp is in nanoseconds, so divide by 1e9 (10^9) to get seconds.
-                # print(' NANOSEC TIMESTAMP: ', dt_value)
-                seconds_timestamp = dt_value / 1e9
-                # Convert the Unix timestamp (in seconds) to a datetime object
-                dt_object = datetime.datetime.fromtimestamp(seconds_timestamp)
-                # Format the datetime object to "dd/mm/yyyy HH:mm:ss"
-                datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-            else:
-                print(f"Unexpected datetime type at index {start_index}: {(dt_value)}")
-                datetime_str = "Invalid Date"
 
-            sensor_readings.append({
-                "datetime": datetime_str,
-                "latitude": latitudes[start_index],
-                "longitude": longitudes[start_index],
-                "depth": depths[start_index],
-                "pressure": pressure_values[start_index],
-                "conductivity": conductivity_values[start_index] if len(conductivity_values) > 0 else None,
-                "salinity": salinity_values[start_index] if len(salinity_values) > 0 else None,
-                "temperature": temperature_values[start_index],
-                "pressure": pressure_values[start_index],
-                "chlorophyll": chlorophyll_values[start_index] if len(chlorophyll_values) > 0 else None,
-            })
+        # 1. Convert Nanoseconds to ISO String format
+        full_global_df['datetime'] = pd.to_datetime(full_global_df['raw_datetime'], unit='ns').dt.strftime("%Y-%m-%d %H:%M:%S")
+        global_df = full_global_df.drop(["raw_datetime"], axis=1)
+
+        start_date_iso = to_iso_format(start_date, "%Y-%m-%d %H:%M:%S")
+        end_date_iso = to_iso_format(end_date, "%Y-%m-%d %H:%M:%S")
+
+        # 2. Filter by Date Range
+        # Convert boundary strings to datetime objects for comparison
+        mask = (global_df['datetime'] >= start_date_iso) & (global_df['datetime'] <= end_date_iso)
+        filtered_df = global_df.loc[mask]
         
+        # 3. Handle Pagination
+        # Calculate start and end indices
+        start_idx = (page_number - 1) * page_size
+        end_idx = start_idx + page_size
+        
+        # Slice the dataframe for the specific page
+        paginated_df = filtered_df.iloc[start_idx:end_idx]
+        
+        # 4. Convert to JSON format
+        json_output = paginated_df.to_json(orient='records', date_format='iso')
+        sensor_readings = json.loads(json_output)
+                
         return {
             "metrics": sensor_readings,
-            "totalRecords": min_size,
-            "currentPage": current_page,
-            "recordsPerPage": records_per_page
+            "totalRecords": global_df.size,
+            "currentPage": page_number,
+            "recordsPerPage": page_size
         }
     
     @staticmethod

@@ -2,3 +2,4 @@ fastapi>=0.115.8
 zarr>=3.0.2
 numpy>=2.2.2
 uvicorn>=0.34.0
+pandas>=3.0.0
