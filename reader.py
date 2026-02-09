@@ -43,61 +43,61 @@ class ZarrReader:
         return []
 
     @staticmethod
-    def get_trajectory(store_path: str, group: Optional[str] = None) -> dict:
+    def get_trajectory(store_path: str, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page_number: Optional[int] = 0, page_size: Optional[int] = 10) -> dict:
         """Get datetime, latitude, longitude and depth data."""
         zarr_group = zarr.open(store_path, mode="r")
-        if group:
-            zarr_group = zarr_group[group]
+        if payload_group:
+            zarr_group = zarr_group[payload_group]
 
         datetimes = zarr_group.get("datetimes", zarr_group.get("time"))[:].tolist() if ("datetimes" in zarr_group or "time" in zarr_group) else []
         latitudes = zarr_group.get("latitude", zarr_group.get("latitudes", zarr_group.get("nav_lat")))[:].tolist() if ("latitudes" in zarr_group or "latitude" in zarr_group or "nav_lat" in zarr_group) else []
         longitudes = zarr_group.get("longitude", zarr_group.get("longitudes", zarr_group.get("nav_lon")))[:].tolist() if ("longitudes" in zarr_group or "longitude" in zarr_group or "nav_lon" in zarr_group) else []
-        depths = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht")))[:].tolist() if ("depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group) else []
+        depths = zarr_group.get("depths", zarr_group.get("depth", zarr_group.get("deptht", zarr_group.get("glider_depth"))))[:].tolist() if ("depths" in zarr_group or "depth" in zarr_group or "deptht" in zarr_group or "glider_depth" in zarr_group) else []
 
-        trajectory = []
-        for i in range(min(len(datetimes), len(latitudes), len(longitudes), len(depths))):
-                datetime_str = ""
-                dt_value = datetimes[i]  # Store the original datetime value
+        full_global_df = pd.DataFrame({
+            "raw_datetime": datetimes,
+            "latitude": latitudes,
+            "longitude": longitudes,
+            "depth": depths
+        })
 
-                if isinstance(dt_value, np.datetime64):
-                    try:
-                        dt_object = dt_value.astype('datetime64[s]').astype(datetime.datetime)
-                        datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    except OverflowError:  # Handle datetime64 out of range
-                        print(f"OverflowError at index {i}: datetime64 value {dt_value} is out of range.")
-                        datetime_str = "Invalid Date"  # Or handle differently
-                elif isinstance(dt_value, (int, np.int64)):
-                    try:
-                        dt_object = datetime.datetime.fromtimestamp(dt_value / 1000000000)
-                        datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    except (ValueError, OSError) as e:  # Handle integer timestamp out of range
-                        print(f"Timestamp error at index {i}: Integer timestamp {dt_value} is out of range: {e}")
-                        datetime_str = "Invalid Date"  # Or handle differently
-                elif isinstance(dt_value, datetime.date):
-                    dt_object = dt_value
-                    datetime_str = dt_object.strftime("%Y-%m-%d %H:%M:%S.%f")
-                elif isinstance(dt_value, str):
-                    datetime_str = dt_value
-                else:  # Handle other data types or missing data as needed
-                    print(f"Unexpected datetime type at index {i}: {type(dt_value)}")
-                    datetime_str = "Invalid Date"
-                
-                trajectory.append({
-                    "datetime": datetime_str,
-                    "latitude": latitudes[i],
-                    "longitude": longitudes[i],
-                    "depth": depths[i]
-                })
+        
+        # 1. Convert Nanoseconds to ISO String format
+        full_global_df['datetime'] = pd.to_datetime(full_global_df['raw_datetime'], unit='ns').dt.strftime("%Y-%m-%d %H:%M:%S")
+        global_df = full_global_df.drop(["raw_datetime"], axis=1)
 
-        return {"trajectory": trajectory}
+        start_date_iso = to_iso_format(start_date, "%Y-%m-%d %H:%M:%S")
+        end_date_iso = to_iso_format(end_date, "%Y-%m-%d %H:%M:%S")
+
+        # 2. Filter by Date Range
+        # Convert boundary strings to datetime objects for comparison
+        mask = (global_df['datetime'] >= start_date_iso) & (global_df['datetime'] <= end_date_iso)
+        filtered_df = global_df.loc[mask]
+        
+        # 3. Handle Pagination
+        # Calculate start and end indices
+        start_idx = (page_number - 1) * page_size
+        end_idx = start_idx + page_size
+        
+        # Slice the dataframe for the specific page
+        paginated_df = filtered_df.iloc[start_idx:end_idx]
+        
+        # 4. Convert to JSON format
+        json_output = paginated_df.to_json(orient='records', date_format='iso')
+        auv_trajectory = json.loads(json_output)
+
+        return {
+            "trajectory": auv_trajectory,
+            "totalRecords": global_df.size,
+            "pageNumber": page_number,
+            "pageSize": page_size
+        }
 
     @staticmethod
-    def get_metrics(store_path: str, trajectory_group: Optional[str] = None, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page_number: Optional[int] = 0, page_size: Optional[int] = 10) -> dict:
+    def get_metrics(store_path: str, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page_number: Optional[int] = 0, page_size: Optional[int] = 10) -> dict:
         """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity/sainity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
-        if trajectory_group:
-            traj_zarr_group = zarr_groups[trajectory_group]
         
         if payload_group:
             payload_zarr_group = zarr_groups[payload_group]

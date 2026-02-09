@@ -59,11 +59,16 @@ class ZarrTilerFactory:
         )
         def trajectory_endpoint(
             url: str = Query(..., description="Dataset URL"),
-            group: Optional[str] = Query(None, description="Zarr group to inspect"),
+            payload_group: Optional[str] = Query(None, description="Zarr group to get AUV's trajectory data"),
+            start_date: Annotated[Optional[str], Query(description="Start date to get AUV's trajectory data")] = None,
+            end_date: Annotated[Optional[str], Query(description="End date to get AUV's trajectory data")] = None,
+            page_number: Annotated[Optional[int], Query(description="Page number")] = 0,
+            page_size: Annotated[Optional[int], Query(description="Page size")] = 10
+
         ) -> dict:
             """Return datetime, latitude, longitude and depth arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url} and group: {group}")
-            return ZarrReader.get_trajectory(url, group)
+            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url} and group: {payload_group}")
+            return ZarrReader.get_trajectory(url, payload_group, start_date, end_date, page_number, page_size)
         
         @self.router.get(
             "/zarr_metrics",
@@ -72,16 +77,15 @@ class ZarrTilerFactory:
         )
         def metrics_endpoint(
             url: Annotated[str, Query(description="Dataset URL")] = ...,
-            trajectory_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
             reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
             start_date: Annotated[Optional[str], Query(description="Start date to get sensor readings")] = None,
             end_date: Annotated[Optional[str], Query(description="End date to get sensor readings")] = None,
             page_number: Annotated[Optional[int], Query(description="Page number")] = 0,
-            page_size: Annotated[Optional[int], Query(description="Number of records per page")] = 10
+            page_size: Annotated[Optional[int], Query(description="Page size")] = 10
         ) -> dict:
             """Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."""
             logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values for URL: {url} and group: {reality_group}")
-            return ZarrReader.get_metrics(url, trajectory_group, reality_group, start_date, end_date, page_number, page_size)
+            return ZarrReader.get_metrics(url, reality_group, start_date, end_date, page_number, page_size)
         
         @self.router.get(
             "/zarr_metrics_units",
