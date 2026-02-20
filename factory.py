@@ -60,15 +60,13 @@ class ZarrTilerFactory:
         def trajectory_endpoint(
             url: str = Query(..., description="Dataset URL"),
             payload_group: Optional[str] = Query(None, description="Zarr group to get AUV's trajectory data"),
+            platform_group: Optional[str] = Query(None, description="Zarr group to get AUV's platform data"),
             start_date: Annotated[Optional[str], Query(description="Start date to get AUV's trajectory data")] = None,
             end_date: Annotated[Optional[str], Query(description="End date to get AUV's trajectory data")] = None,
-            page_number: Annotated[Optional[int], Query(description="Page number")] = 0,
-            page_size: Annotated[Optional[int], Query(description="Page size")] = 10
-
         ) -> dict:
-            """Return datetime, latitude, longitude and depth arrays."""
-            logger.info(f"Fetching datetime, latitude, longitude and depth values for URL: {url} and group: {payload_group}")
-            return ZarrReader.get_trajectory(url, payload_group, start_date, end_date, page_number, page_size)
+            """Return czml json file."""
+            logger.info(f"Fetching czml json file which contains latitude, longitude and depth values of AUV's trajectory: {url} and group: {payload_group}")
+            return ZarrReader.get_trajectory(url, payload_group, platform_group, start_date, end_date)
         
         @self.router.get(
             "/zarr_metrics",
