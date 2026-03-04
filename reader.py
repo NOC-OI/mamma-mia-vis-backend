@@ -7,6 +7,7 @@ from pyproj import Transformer
 from utils.util import *
 from utils.czmlFile import *
 from models.cartesian2D import *
+from models.cartesian3D import *
 from models.typeAUV import *
 from models.metricUnit import MetricUnit, short_name, formatMetricUnitName
 
@@ -109,8 +110,8 @@ class ZarrReader:
                         {
                             "id": short_platform_name,
                             "availability": to_interval_format(start_date, end_date),
-                            "billboard": get_billboard(start_date, end_date, True, AUV_base64_svg),
-                            "label": get_label(start_date, end_date, platform_type, Colour(255, 255, 0, 255), Colour(0, 0, 0, 255), Cartesian2D(10.0, 20), Origin("CENTER", "TOP")),
+                            "billboard": get_billboard(start_date, end_date, True, AUV_base64_svg, Origin("CENTER", "BOTTOM"), 0.6, Cartesian3D(0, 0, 0), Cartesian2D(1, -10)),
+                            "label": get_label(start_date, end_date, platform_type, Colour(255, 255, 0, 255), Colour(0, 0, 0, 255), Origin("CENTER", "BOTTOM"), Cartesian2D(0, -10)),
                             "path":get_path(start_date, end_date, True),
                             "position":get_position(start_date, output_trajectory)
                         }

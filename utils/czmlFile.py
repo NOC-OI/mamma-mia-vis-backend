@@ -3,6 +3,7 @@ from models.colour import *
 from models.typeAUV import *
 from utils.util import *
 from models.cartesian2D import *
+from models.cartesian3D import *
 from models.origin import *
 
 def get_document_data():
@@ -19,26 +20,25 @@ def get_fill_colour_at_interval(interval: str, inputColour: Colour):
         }
     ]
 
-def get_billboard(start_date: str, end_date: str, is_shown: bool, AUV_image: str, horizontal_origin = "CENTER", scale = 0.8333333333333334, show = True, vertical_origin = "BOTTOM"):
+def get_billboard(start_date: str, end_date: str, is_shown: bool, AUV_image: str, origin: Origin, scale, eye_offset: Cartesian3D, pixel_offset: Cartesian2D):
     return {
-        "eye_offset": {
-            "cartesian":[
-            0.0,0.0,0.0
-            ]
+        "eyeOffset": {
+            "cartesian": eye_offset.get3DCoordinates()
         },
-        "horizontal_origin": horizontal_origin,
+        "horizontalOrigin": origin.horizontal,
         "image": AUV_image,
-        "pixel_offset": {
-            "cartesian2":[
-            0.0,0.0
-            ]
+        "pixelOffset": {
+            "cartesian2": pixel_offset.get2DCoordinates()
         },
         "scale":scale,
         "show": show_at_interval(to_interval_format(start_date, end_date), is_shown),
-        "vertical_origin": vertical_origin
+        "verticalOrigin": origin.vertical,
+        "pixelOffsetScaleByDistance": {
+            "nearFarScalar": [ 1.0, 2.0, 500.0, 3.0 ]
+        }
     }
 
-def get_label(start_date: str, end_date: str, platform_type: str, fill_colour: Colour, outline_colour: Colour, pixel_offset: Cartesian2D, origin: Origin):
+def get_label(start_date: str, end_date: str, platform_type: str, fill_colour: Colour, outline_colour: Colour, origin: Origin, pixel_offset: Cartesian2D):
     return {
             "fillColor":get_fill_colour_at_interval(to_interval_format(start_date, end_date), fill_colour),
             "font":"bold 10pt Segoe UI Semibold",
