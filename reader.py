@@ -47,7 +47,7 @@ class ZarrReader:
         return []
 
     @staticmethod
-    def get_trajectory(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
+    def get_trajectory(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
         """Get datetime, latitude, longitude and depth data."""
 
         zarr_group_data = zarr.open(store_path, mode="r")
@@ -61,7 +61,7 @@ class ZarrReader:
         latitudes = payload_group_data.get("latitude", payload_group_data.get("latitudes", payload_group_data.get("nav_lat", payload_group_data.get("ALATPT01"))))[:].tolist() if ("latitudes" in payload_group_data or "latitude" in payload_group_data or "nav_lat" or "ALATPT01" in payload_group_data) else []
         longitudes = payload_group_data.get("longitude", payload_group_data.get("longitudes", payload_group_data.get("nav_lon", payload_group_data.get("ALONPT01"))))[:].tolist() if ("longitudes" in payload_group_data or "longitude" in payload_group_data or "nav_lon" or "ALONPT01" in payload_group_data) else []
         depths = payload_group_data.get("depths", payload_group_data.get("depth", payload_group_data.get("deptht", payload_group_data.get("glider_depth", payload_group_data.get("ADEPPT01")))))[:].tolist() if ("depths" in payload_group_data or "depth" in payload_group_data or "deptht" in payload_group_data or "glider_depth" or "ADEPPT01" in payload_group_data) else []
-        platform_type = platform_group_metadata["platform_type"]
+        platform_type = platform_group_metadata[platform_model_name]
         short_platform_name = name[get_key_by_value(TypeAUV, platform_type)]
 
         full_global_df = pd.DataFrame({

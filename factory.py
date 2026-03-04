@@ -61,12 +61,13 @@ class ZarrTilerFactory:
             url: str = Query(..., description="Dataset URL"),
             payload_group: Optional[str] = Query(None, description="Zarr group to get AUV's trajectory data"),
             platform_group: Optional[str] = Query(None, description="Zarr group to get AUV's platform data"),
+            platform_model_name: Optional[str] = Query(None, description="Attribute to get AUV's platform model name"),
             start_date: Annotated[Optional[str], Query(description="Start date to get AUV's trajectory data")] = None,
             end_date: Annotated[Optional[str], Query(description="End date to get AUV's trajectory data")] = None,
         ) -> dict:
             """Return czml json file."""
             logger.info(f"Fetching czml json file which contains latitude, longitude and depth values of AUV's trajectory: {url} and group: {payload_group}")
-            return ZarrReader.get_trajectory(url, payload_group, platform_group, start_date, end_date)
+            return ZarrReader.get_trajectory(url, payload_group, platform_group, platform_model_name, start_date, end_date)
         
         @self.router.get(
             "/zarr_metrics",
