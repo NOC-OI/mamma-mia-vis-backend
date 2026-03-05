@@ -78,13 +78,11 @@ class ZarrTilerFactory:
             url: Annotated[str, Query(description="Dataset URL")] = ...,
             reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
             start_date: Annotated[Optional[str], Query(description="Start date to get sensor readings")] = None,
-            end_date: Annotated[Optional[str], Query(description="End date to get sensor readings")] = None,
-            page_number: Annotated[Optional[int], Query(description="Page number")] = 0,
-            page_size: Annotated[Optional[int], Query(description="Page size")] = 10
+            end_date: Annotated[Optional[str], Query(description="End date to get sensor readings")] = None
         ) -> dict:
             """Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."""
             logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values for URL: {url} and group: {reality_group}")
-            return ZarrReader.get_metrics(url, reality_group, start_date, end_date, page_number, page_size)
+            return ZarrReader.get_metrics(url, reality_group, start_date, end_date)
         
         @self.router.get(
             "/zarr_metrics_units",

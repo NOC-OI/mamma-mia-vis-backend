@@ -123,7 +123,7 @@ class ZarrReader:
         }
  
     @staticmethod
-    def get_metrics(store_path: str, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, page_number: Optional[int] = 0, page_size: Optional[int] = 10) -> dict:
+    def get_metrics(store_path: str, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
         """Get datetime, latitude, longitude, depth, nitrate, phosphate, pressure, conductivity/sainity, silicate and temperature data."""
 
         zarr_groups = zarr.open(store_path, mode="r")
@@ -166,23 +166,13 @@ class ZarrReader:
         mask = (global_df['datetime'] >= start_date_iso) & (global_df['datetime'] <= end_date_iso)
         filtered_df = global_df.loc[mask]
         
-        # 3. Handle Pagination
-        # Calculate start and end indices
-        start_idx = (page_number - 1) * page_size
-        end_idx = start_idx + page_size
-        
-        # Slice the dataframe for the specific page
-        paginated_df = filtered_df.iloc[start_idx:end_idx]
-        
-        # 4. Convert to JSON format
-        json_output = paginated_df.to_json(orient='records', date_format='iso')
+        # 3. Convert to JSON format
+        json_output = filtered_df.to_json(orient='records', date_format='iso')
         sensor_readings = json.loads(json_output)
                 
         return {
             "metrics": sensor_readings,
-            "totalRecords": global_df.size,
-            "currentPage": page_number,
-            "recordsPerPage": page_size
+            "totalRecords": global_df.size
         }
     
     @staticmethod
