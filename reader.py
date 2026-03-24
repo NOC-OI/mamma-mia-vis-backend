@@ -1,6 +1,6 @@
 import zarr
 import numpy as np
-from typing import List, Optional
+from typing import List, Optional, Any, Tuple
 import json
 import pandas as pd
 from pyproj import Transformer
@@ -47,22 +47,25 @@ class ZarrReader:
         return []
 
     @staticmethod
-    def get_trajectory(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
-        """Get datetime, latitude, longitude and depth data."""
-
+    def get_trajectory_dataframe(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Any:
+        """Helper to get and filter trajectory data into a pandas DataFrame."""
         zarr_group_data = zarr.open(store_path, mode="r")
-        if payload_group:
-            payload_group_data = zarr_group_data[payload_group]
+        payload_group_data = zarr_group_data[payload_group] if payload_group else zarr_group_data
 
+        platform_group_metadata = {}
         if platform_group:
             platform_group_metadata = dict(zarr_group_data[platform_group].attrs)
 
         datetimes = payload_group_data.get("datetimes", payload_group_data.get("time"))[:].tolist() if ("datetimes" in payload_group_data or "time" in payload_group_data) else []
-        latitudes = payload_group_data.get("latitude", payload_group_data.get("latitudes", payload_group_data.get("nav_lat", payload_group_data.get("ALATPT01"))))[:].tolist() if ("latitudes" in payload_group_data or "latitude" in payload_group_data or "nav_lat" or "ALATPT01" in payload_group_data) else []
-        longitudes = payload_group_data.get("longitude", payload_group_data.get("longitudes", payload_group_data.get("nav_lon", payload_group_data.get("ALONPT01"))))[:].tolist() if ("longitudes" in payload_group_data or "longitude" in payload_group_data or "nav_lon" or "ALONPT01" in payload_group_data) else []
-        depths = payload_group_data.get("depths", payload_group_data.get("depth", payload_group_data.get("deptht", payload_group_data.get("glider_depth", payload_group_data.get("ADEPPT01")))))[:].tolist() if ("depths" in payload_group_data or "depth" in payload_group_data or "deptht" in payload_group_data or "glider_depth" or "ADEPPT01" in payload_group_data) else []
-        platform_type = platform_group_metadata[platform_model_name]
-        short_platform_name = name[get_key_by_value(TypeAUV, platform_type)]
+        latitudes = payload_group_data.get("latitude", payload_group_data.get("latitudes", payload_group_data.get("nav_lat", payload_group_data.get("ALATPT01"))))[:].tolist() if ("latitudes" in payload_group_data or "latitude" in payload_group_data or "nav_lat" in payload_group_data or "ALATPT01" in payload_group_data) else []
+        longitudes = payload_group_data.get("longitude", payload_group_data.get("longitudes", payload_group_data.get("nav_lon", payload_group_data.get("ALONPT01"))))[:].tolist() if ("longitudes" in payload_group_data or "longitude" in payload_group_data or "nav_lon" in payload_group_data or "ALONPT01" in payload_group_data) else []
+        depths = payload_group_data.get("depths", payload_group_data.get("depth", payload_group_data.get("deptht", payload_group_data.get("glider_depth", payload_group_data.get("ADEPPT01")))))[:].tolist() if ("depths" in payload_group_data or "depth" in payload_group_data or "deptht" in payload_group_data or "glider_depth" in payload_group_data or "ADEPPT01" in payload_group_data) else []
+        
+        platform_type = "unknown"
+        short_platform_name = "unknown"
+        if platform_group and platform_model_name and platform_model_name in platform_group_metadata:
+            platform_type = platform_group_metadata[platform_model_name]
+            short_platform_name = name[get_key_by_value(TypeAUV, platform_type)]
 
         full_global_df = pd.DataFrame({
             "raw_datetime": datetimes,
@@ -78,31 +81,33 @@ class ZarrReader:
         full_global_df['raw_datetime'] = pd.to_datetime(full_global_df['raw_datetime'], unit='ns')        
         
         # 3. Filter by Date Range
-        # Convert boundary strings to datetime objects for comparison
         start_date_iso = to_iso_format(start_date, "%Y-%m-%d %H:%M:%S")
         end_date_iso = to_iso_format(end_date, "%Y-%m-%d %H:%M:%S")
         mask = (full_global_df['datetime'] >= start_date_iso) & (full_global_df['datetime'] <= end_date_iso)
-        filtered_df = full_global_df.loc[mask]
+        filtered_df = full_global_df.loc[mask].copy()
+
+        return filtered_df, full_global_df, short_platform_name, platform_type
+
+    @staticmethod
+    def get_trajectory(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:
+        """Get datetime, latitude, longitude and depth data."""
+
+        filtered_df, full_global_df, short_platform_name, platform_type = ZarrReader.get_trajectory_dataframe(store_path, payload_group, platform_group, platform_model_name, start_date, end_date)
+
+        start_coordinates = []
+        output_trajectory = []
+        AUV_base64_svg = ""
 
         if not filtered_df.empty:
             start_time = filtered_df['raw_datetime'].min()
             filtered_df['time_offset'] = (filtered_df['raw_datetime'] - start_time).dt.total_seconds()
-
-            # TODO: Test if rendering's performance improves using cartesian coordinates
-            # transformer = Transformer.from_crs("EPSG:4326", "EPSG:4978", always_xy=True)
-
-            # paginated_df['x'], paginated_df['y'], paginated_df['z'] = transformer.transform(
-            #     paginated_df['longitude'].values, 
-            #     paginated_df['latitude'].values, 
-            #     paginated_df['depth'].values
-            # )
             start_coordinates = filtered_df[["longitude", "latitude"]].iloc[0:1].values.flatten().tolist()
             output_trajectory = filtered_df[['time_offset', 'longitude', 'latitude', 'depth']].values.flatten().tolist()
             AUV_svg_path = get_AUV_svg_path(platform_type)
             AUV_base64_svg = get_svg_base64(AUV_svg_path)
-        
-        deployment_start_date = full_global_df['datetime'].min()
-        deployment_end_date = full_global_df['datetime'].max()
+            
+        deployment_start_date = full_global_df['datetime'].min() if not full_global_df.empty else None
+        deployment_end_date = full_global_df['datetime'].max() if not full_global_df.empty else None
         
         return {
                  "trajectory":  [
@@ -121,6 +126,20 @@ class ZarrReader:
                 "deploymentEndDate": deployment_end_date,
                 "totalRecords": full_global_df.size,
         }
+
+    @staticmethod
+    def get_trajectory_csv(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+        """Get trajectory data in CSV format."""
+        filtered_df, _, _, _ = ZarrReader.get_trajectory_dataframe(store_path, payload_group, platform_group, platform_model_name, start_date, end_date)
+
+        if filtered_df.empty:
+            return "id,longitude,latitude,depth\n"
+
+        csv_df = filtered_df[['longitude', 'latitude', 'depth']].copy()
+        csv_df.insert(0, 'id', range(1, len(csv_df) + 1))
+
+        return csv_df.to_csv(index=False)
+
  
     @staticmethod
     def get_metrics(store_path: str, payload_group: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> dict:

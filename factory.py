@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from typing import List, Optional, Annotated
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from  reader import ZarrReader
 import logging
 
@@ -68,6 +68,25 @@ class ZarrTilerFactory:
             """Return czml json file."""
             logger.info(f"Fetching czml json file which contains latitude, longitude and depth values of AUV's trajectory: {url} and group: {payload_group}")
             return ZarrReader.get_trajectory(url, payload_group, platform_group, platform_model_name, start_date, end_date)
+
+        @self.router.get(
+            "/zarr_trajectory_csv",
+            responses={200: {"description": "Return dataset's id, latitude, longitude and depth in CSV format."}},
+        )
+        def trajectory_csv_endpoint(
+            url: str = Query(..., description="Dataset URL"),
+            payload_group: Optional[str] = Query(None, description="Zarr group to get AUV's trajectory data"),
+            platform_group: Optional[str] = Query(None, description="Zarr group to get AUV's platform data"),
+            platform_model_name: Optional[str] = Query(None, description="Attribute to get AUV's platform model name"),
+            start_date: Annotated[Optional[str], Query(description="Start date to get AUV's trajectory data")] = None,
+            end_date: Annotated[Optional[str], Query(description="End date to get AUV's trajectory data")] = None,
+        ):
+            """Return CSV file with trajectory data."""
+            logger.info(f"Fetching CSV file which contains id, latitude, longitude and depth values of AUV's trajectory: {url} and group: {payload_group}")
+            csv_content = ZarrReader.get_trajectory_csv(url, payload_group, platform_group, platform_model_name, start_date, end_date)
+            return Response(content=csv_content, media_type="text/csv", headers={
+                "Content-Disposition": "attachment; filename=trajectory.csv"
+            })
         
         @self.router.get(
             "/zarr_metrics",
@@ -75,10 +94,10 @@ class ZarrTilerFactory:
             responses={200: {"description": "Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."}},
         )
         def metrics_endpoint(
-            url: Annotated[str, Query(description="Dataset URL")] = ...,
-            reality_group: Annotated[Optional[str], Query(description="Zarr group to inspect to get sensor readings")] = None,
-            start_date: Annotated[Optional[str], Query(description="Start date to get sensor readings")] = None,
-            end_date: Annotated[Optional[str], Query(description="End date to get sensor readings")] = None
+            url: str = Query(..., description="Dataset URL"),
+            reality_group: Optional[str] = Query(None, description="Zarr group to inspect to get sensor readings"),
+            start_date: Optional[str] = Query(None, description="Start date to get sensor readings"),
+            end_date: Optional[str] = Query(None, description="End date to get sensor readings")
         ) -> dict:
             """Return datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values."""
             logger.info(f"Fetching datetime, latitude, longitude, depth, conductivity/salinity, temperature, pressure and chlorophyll values for URL: {url} and group: {reality_group}")
