@@ -81,9 +81,9 @@ class ZarrReader:
         full_global_df['raw_datetime'] = pd.to_datetime(full_global_df['raw_datetime'], unit='ns')        
         
         # 3. Filter by Date Range
-        start_date_iso = to_iso_format(start_date, "%Y-%m-%d %H:%M:%S")
-        end_date_iso = to_iso_format(end_date, "%Y-%m-%d %H:%M:%S")
-        mask = (full_global_df['datetime'] >= start_date_iso) & (full_global_df['datetime'] <= end_date_iso)
+        start_dt = pd.to_datetime(start_date)
+        end_dt = pd.to_datetime(end_date)
+        mask = (full_global_df['raw_datetime'] >= start_dt) & (full_global_df['raw_datetime'] <= end_dt)
         filtered_df = full_global_df.loc[mask].copy()
 
         return filtered_df, full_global_df, short_platform_name, platform_type
@@ -108,7 +108,7 @@ class ZarrReader:
             
         deployment_start_date = full_global_df['datetime'].min() if not full_global_df.empty else None
         deployment_end_date = full_global_df['datetime'].max() if not full_global_df.empty else None
-        
+
         return {
                  "trajectory":  [
                         get_document_data(), 
@@ -124,7 +124,7 @@ class ZarrReader:
                 "startCoordinates": start_coordinates if not filtered_df.empty else [],
                 "deploymentStartDate": deployment_start_date,
                 "deploymentEndDate": deployment_end_date,
-                "totalRecords": full_global_df.size,
+                "totalRecords": full_global_df.shape[0],
         }
 
     @staticmethod
@@ -181,7 +181,6 @@ class ZarrReader:
         end_date_iso = to_iso_format(end_date, "%Y-%m-%d %H:%M:%S")
 
         # 2. Filter by Date Range
-        # Convert boundary strings to datetime objects for comparison
         mask = (global_df['datetime'] >= start_date_iso) & (global_df['datetime'] <= end_date_iso)
         filtered_df = global_df.loc[mask]
         
@@ -191,7 +190,7 @@ class ZarrReader:
                 
         return {
             "metrics": sensor_readings,
-            "totalRecords": global_df.size
+            "totalRecords": global_df.shape[0]
         }
     
     @staticmethod

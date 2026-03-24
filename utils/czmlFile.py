@@ -98,5 +98,4 @@ def vehicle_width(interval: str, width: int):
     ]
 
 def get_AUV_svg_path(typeAUV: str):
-     print( 'AUV TYPE: ', typeAUV, ' OTHER: ', TypeAUV.ALR.value)
      return "./assets/icons/auv_boaty_mc_boatface.svg" if typeAUV == TypeAUV.ALR.value else "./assets/icons/glider.svg"
