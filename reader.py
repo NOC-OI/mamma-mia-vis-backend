@@ -3,7 +3,7 @@ import numpy as np
 from typing import List, Optional, Any, Tuple
 import json
 import pandas as pd
-from pyproj import Transformer
+import pyproj
 from utils.util import *
 from utils.czmlFile import *
 from models.cartesian2D import *
@@ -128,7 +128,7 @@ class ZarrReader:
         }
 
     @staticmethod
-    def get_trajectory_csv(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None) -> str:
+    def get_trajectory_csv(store_path: str, payload_group: Optional[str] = None, platform_group: Optional[str] = None, platform_model_name: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, target_depth_format: Optional[str] = None) -> str:
         """Get trajectory data in CSV format."""
         filtered_df, _, _, _ = ZarrReader.get_trajectory_dataframe(store_path, payload_group, platform_group, platform_model_name, start_date, end_date)
 
@@ -136,9 +136,14 @@ class ZarrReader:
             return "id,longitude,latitude,depth\n"
 
         csv_df = filtered_df[['longitude', 'latitude', 'depth']].copy()
+        final_csv_df = csv_df
         csv_df.insert(0, 'id', range(1, len(csv_df) + 1))
+        if target_depth_format and target_depth_format.lower() == "wgs84 ellipsoid":
+            # TODO: Check if there is a way to move grid files from this pyproj.datadir.get_data_dir() path to assets folder and read from there instead of calling from the local file system.
+            csv_df['wgs84_depth'] = csv_df.rename(columns={'depth': 'msl_depth'}).apply(convert_depth_to_ellipsoid, axis=1)
+            final_csv_df = csv_df[['id', 'longitude', 'latitude', 'wgs84_depth']].rename(columns={'wgs84_depth': 'depth'})    
 
-        return csv_df.to_csv(index=False)
+        return final_csv_df.to_csv(index=False)
 
  
     @staticmethod

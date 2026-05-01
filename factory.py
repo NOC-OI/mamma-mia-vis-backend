@@ -80,10 +80,11 @@ class ZarrTilerFactory:
             platform_model_name: Optional[str] = Query(None, description="Attribute to get AUV's platform model name"),
             start_date: Annotated[Optional[str], Query(description="Start date to get AUV's trajectory data")] = None,
             end_date: Annotated[Optional[str], Query(description="End date to get AUV's trajectory data")] = None,
+            target_depth_format: Optional[str] = Query(None, description="Format to return depth values, either in 'Mean Sea Level' or 'WGS84 Ellipsoid'.")
         ):
             """Return CSV file with trajectory data."""
             logger.info(f"Fetching CSV file which contains id, latitude, longitude and depth values of AUV's trajectory: {url} and group: {payload_group}")
-            csv_content = ZarrReader.get_trajectory_csv(url, payload_group, platform_group, platform_model_name, start_date, end_date)
+            csv_content = ZarrReader.get_trajectory_csv(url, payload_group, platform_group, platform_model_name, start_date, end_date, target_depth_format)
             return Response(content=csv_content, media_type="text/csv", headers={
                 "Content-Disposition": "attachment; filename=trajectory.csv"
             })

@@ -2,6 +2,13 @@ from datetime import datetime
 from typing import Type, Any, Optional
 from enum import Enum
 import base64
+from pyproj import Transformer, network
+
+
+# Enable automatic download of grids from the OSGeo server
+network.set_network_enabled(True)
+# 4326 (Lat/Lon) + 5773 (EGM96 height) to WGS84 Geodetic 3D (4979)
+transformer = Transformer.from_crs("epsg:4326+5773", "epsg:4979", always_xy=True)
 
 def to_iso_format(date_str, input_format="%Y-%m-%d", output_format="%Y-%m-%d %H:%M:%S.%f"):
     """
@@ -77,3 +84,15 @@ def get_svg_base64(file_path):
             return f"data:image/svg+xml;base64,{base64_encoded}"
     except FileNotFoundError:
         return "Error: File not found."
+    
+def convert_depth_to_ellipsoid(row):    
+    """
+    Converts depth from mean sea level (MSL) to WGS84 ellipsoidal height using pyproj.
+    Args:        
+        row: A pandas Series containing 'longitude', 'latitude', and 'msl_depth' columns.
+    Returns:        
+        The ellipsoidal height corresponding to the input depth.
+    """
+    orthometric_height = - row['msl_depth']
+    lon, lat, ellipsoidal_height = transformer.transform(row['longitude'], row['latitude'], orthometric_height)
+    return ellipsoidal_height
