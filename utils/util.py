@@ -4,7 +4,6 @@ from enum import Enum
 import base64
 from pyproj import Transformer, network
 
-
 # Enable automatic download of grids from the OSGeo server
 network.set_network_enabled(True)
 # 4326 (Lat/Lon) + 5773 (EGM96 height) to WGS84 Geodetic 3D (4979)

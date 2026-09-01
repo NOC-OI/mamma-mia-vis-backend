@@ -1,9 +1,7 @@
 import zarr
-import numpy as np
-from typing import List, Optional, Any, Tuple
+from typing import List, Optional, Any
 import json
 import pandas as pd
-import pyproj
 from utils.util import *
 from utils.czmlFile import *
 from models.cartesian2D import *
@@ -116,7 +114,7 @@ class ZarrReader:
                             "id": short_platform_name,
                             "availability": to_interval_format(start_date, end_date),
                             "billboard": get_billboard(start_date, end_date, True, AUV_base64_svg, Origin("CENTER", "BOTTOM"), 0.6, Cartesian3D(0, 0, 0), Cartesian2D(1, -10)),
-                            "label": get_label(start_date, end_date, platform_type, Colour(255, 255, 0, 255), Colour(0, 0, 0, 255), Origin("CENTER", "BOTTOM"), Cartesian2D(0, -10)),
+                            "label": get_label(start_date, end_date, platform_type, Colour(243, 130, 10, 255), Colour(255, 255, 0, 255), Origin("CENTER", "BOTTOM"), Cartesian2D(0, -10)),
                             "path":get_path(start_date, end_date, True),
                             "position":get_position(start_date, output_trajectory)
                         }
@@ -139,7 +137,6 @@ class ZarrReader:
         final_csv_df = csv_df
         csv_df.insert(0, 'id', range(1, len(csv_df) + 1))
         if target_depth_format and target_depth_format.lower() == "wgs84 ellipsoid":
-            # TODO: Check if there is a way to move grid files from this pyproj.datadir.get_data_dir() path to assets folder and read from there instead of calling from the local file system.
             csv_df['wgs84_depth'] = csv_df.rename(columns={'depth': 'msl_depth'}).apply(convert_depth_to_ellipsoid, axis=1)
             final_csv_df = csv_df[['id', 'longitude', 'latitude', 'wgs84_depth']].rename(columns={'wgs84_depth': 'depth'})    
 
