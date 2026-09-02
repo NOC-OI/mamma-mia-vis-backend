@@ -1,4 +1,4 @@
-# MAMMA-MIA Visualization Backend
+# MAMMA MIA Visualization Backend
 
 Backend API to get glider/ALR trajectory data and metrics readings like practical salinity, sea temperature and chlorophyll sensor data.
 
@@ -39,5 +39,5 @@ To build static documentation site:
 ```bash
 mkdocs build
 ```
-The documentation source files are located in the `docs/` folder (including [Getting Started with MAMMA-MIA backend](docs/getting-started.md)).
+The documentation source files are located in the `docs/` folder (including [Getting Started with MAMMA MIA backend](docs/getting-started.md)).
 

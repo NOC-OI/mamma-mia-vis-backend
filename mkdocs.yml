@@ -1,20 +1,20 @@
-site_name: MAMMA-MIA Visualization Backend Documentation
-site_description: Documentation for MAMMA-MIA glider/ALR trajectory data and marine metrics visualization backend API.
-site_author: MAMMA-MIA Team
+site_name: MAMMA MIA Visualization Backend Documentation
+site_description: Documentation for MAMMA MIA glider/ALR trajectory data and marine metrics visualization backend API.
+site_author: Magda Juarez Olaya
 
 theme:
   name: material
   palette:
     # Scheme toggle for light / dark mode
     - scheme: default
-      primary: teal
-      accent: cyan
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: teal
-      accent: cyan
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
@@ -38,5 +38,5 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - Getting Started with MAMMA-MIA backend: getting-started.md
+  - Getting Started with MAMMA MIA backend: getting-started.md
   - API Reference: api-reference.md

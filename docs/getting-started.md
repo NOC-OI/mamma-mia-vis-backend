@@ -1,6 +1,6 @@
-# Getting Started with MAMMA-MIA backend
+# Getting Started with MAMMA MIA backend
 
-This guide will walk you through setting up and running the MAMMA-MIA Visualization Backend locally or using Docker.
+This guide will walk you through setting up and running the MAMMA MIA Visualization Backend locally or using Docker.
 
 ---
 

@@ -1,6 +1,6 @@
 # API Reference
 
-The MAMMA-MIA Visualization Backend provides FastAPI endpoints for querying and reading Zarr oceanographic datasets.
+The MAMMA MIA Visualization Backend provides FastAPI endpoints for querying and reading Zarr oceanographic datasets.
 
 ## Interactive API Documentation
 

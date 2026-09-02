@@ -1,10 +1,10 @@
-# MAMMA-MIA Visualization Backend
+# MAMMA MIA Visualization Backend
 
-Welcome to the documentation for the **MAMMA-MIA Visualization Backend**.
+Welcome to the documentation for the **MAMMA MIA Visualization Backend**.
 
 ## Overview
 
-The MAMMA-MIA Visualization Backend is a high-performance FastAPI service designed to serve oceanographic data. Data source comes from [MAMMA MIA toolbox](https://noc-mdp.github.io/MammaMia/) which simulates the payload (sensors) and trajectory of a platform (Autonomous Underwater Vehicle). It exposes API endpoints to retrieve:
+The MAMMA MIA Visualization Backend is a high-performance FastAPI service designed to serve oceanographic data. Data source comes from [MAMMA MIA toolbox](https://noc-mdp.github.io/MammaMia/) which simulates the payload (sensors) and trajectory of a platform (Autonomous Underwater Vehicle). It exposes API endpoints to retrieve:
 
 - Trajectory data from platforms such as Slocum Glider.
 - Oceanographic sensor readings data from platforms like Autosub Long Range (ALR) and Slocum Glider, including:
@@ -24,5 +24,5 @@ The backend consists of:
 
 ## Documentation Structure
 
-- [Getting Started with MAMMA-MIA backend](getting-started.md): Installation, running locally with Uvicorn, and Docker container deployment.
+- [Getting Started with MAMMA MIA backend](getting-started.md): Installation, running locally with Uvicorn, and Docker container deployment.
 - [API Reference](api-reference.md): Detailed information on endpoints, request parameters, response schemas, and interactive Swagger/OpenAPI docs.
