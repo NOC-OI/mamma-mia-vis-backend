@@ -1,0 +1,42 @@
+site_name: MAMMA-MIA Visualization Backend Documentation
+site_description: Documentation for MAMMA-MIA glider/ALR trajectory data and marine metrics visualization backend API.
+site_author: MAMMA-MIA Team
+
+theme:
+  name: material
+  palette:
+    # Scheme toggle for light / dark mode
+    - scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+nav:
+  - Home: index.md
+  - Getting Started with MAMMA-MIA backend: getting-started.md
+  - API Reference: api-reference.md
