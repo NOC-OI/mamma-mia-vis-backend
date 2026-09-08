@@ -6,9 +6,23 @@ This guide will walk you through setting up and running the MAMMA MIA Visualizat
 
 ## Prerequisites
 
-- **Python**: `3.10+` (Python 3.12 recommended)
-- **Pip**: Latest version
-- **Docker & Docker Compose**: (Optional, for containerized deployments)
+### Dependencies
+MAMMA MIA backend supports Python >=3.10 but Python 3.12 is recommended. Also, it's recommended to use latest version of pip. Alternatively, you can use Docker and Docker Compose for containerised deployments.
+
+   ```
+   fastapi>=0.115.8
+   zarr>=3.0.2
+   numpy>=2.2.2
+   uvicorn>=0.34.0
+   pandas>=3.0.0
+   pyproj>=3.7.2
+   mkdocs>=1.6.0
+   mkdocs-material>=9.5.0
+   ```
+### Data
+
+1. Create a folder called **data_inputs** under **assets** folder. Donwload data generated from MAMMA MIA toolbox at this link: [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22306342.svg)](https://doi.org/10.5281/zenodo.22306342). Move data to this folder.
+2. To use **trajectory data (CSV)** endpoint, you need to download a vertical grid file from this link: [EGM96 15' global vertical datum grid](https://github.com/OSGeo/proj-datumgrid/blob/master/egm96_15.gtx) and move it to PROJ data directory. For an installed PROJ this may be /usr/local/share/proj or /user/share/proj on unix style operating systems. For conda environments this may be /path/to/conda/env/share/proj. 
 
 ---
 
@@ -55,6 +69,7 @@ uvicorn main:app --reload --port 8040
 ```
 
 Once running, the backend API is available at:
+
 - **Base API URL**: `http://127.0.0.1:8040`
 - **Interactive OpenAPI / Swagger Documentation**: [http://127.0.0.1:8040/docs](http://127.0.0.1:8040/docs)
 - **ReDoc Documentation**: [http://127.0.0.1:8040/redoc](http://127.0.0.1:8040/redoc)
@@ -63,7 +78,7 @@ Once running, the backend API is available at:
 
 ## Running Backend API using Docker
 
-You can containerize and run the application using Docker or Docker Compose.
+You can containerise and run the application using Docker or Docker Compose.
 
 ### Using Docker Compose (Recommended)
 
