@@ -1,4 +1,5 @@
-assets
+assets/*
+!assets/icons/
 .DS_Store
 *.pyc
 site/
